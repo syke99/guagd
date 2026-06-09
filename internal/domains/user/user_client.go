@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"guagd/internal/pkg/models"
 )
 
 type UserClient interface {
@@ -32,20 +34,25 @@ func (u *userClient) Handlers() map[string]http.HandlerFunc {
 }
 
 func (u *userClient) register(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
-	}
+	var payload models.UserRegisterPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		w.Header().Set("HX-Location", `{"path":"/signup/failure","target":"#hero-right"}`)
-		w.WriteHeader(http.StatusOK)
+		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#hero-right"})
 		return
 	}
 
 	log.Printf("register: name=%s email=%s", payload.Name, payload.Email)
 
 	// TODO: persist user
-	w.Header().Set("HX-Location", `{"path":"/signup/success","target":"#hero-right"}`)
+	redirect(w, models.HTMXRedirectResponse{Path: "/signup/success", Target: "#hero-right"})
+}
+
+func redirect(w http.ResponseWriter, resp models.HTMXRedirectResponse) {
+	b, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("HX-Location", string(b))
 	w.WriteHeader(http.StatusOK)
 }

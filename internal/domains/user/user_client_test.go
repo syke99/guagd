@@ -2,12 +2,14 @@ package user
 
 import (
 	"bytes"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
+
+	"guagd/internal/pkg/models"
 )
 
 const testBaseRoute = "/users/"
@@ -33,39 +35,83 @@ func TestHandlers(t *testing.T) {
 }
 
 func TestRegister(t *testing.T) {
-	t.Run("logs email from request body", func(t *testing.T) {
+	t.Run("logs name and email and redirects to success", func(t *testing.T) {
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 		t.Cleanup(func() { log.SetOutput(nil) })
 
-		form := url.Values{}
-		form.Set("email", "test@example.com")
+		payload := models.UserRegisterPayload{Name: "Test User", Email: "test@example.com"}
+		body, _ := json.Marshal(payload)
 
-		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", strings.NewReader(form.Encode()))
-		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", bytes.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
 		c := NewUserClient(testBaseRoute)
 		c.register(w, r)
 
 		if !strings.Contains(buf.String(), "test@example.com") {
-			t.Errorf("expected log output to contain email, got: %s", buf.String())
+			t.Errorf("expected log to contain email, got: %s", buf.String())
+		}
+		if !strings.Contains(buf.String(), "Test User") {
+			t.Errorf("expected log to contain name, got: %s", buf.String())
+		}
+
+		loc := w.Header().Get("HX-Location")
+		if !strings.Contains(loc, "/signup/success") {
+			t.Errorf("expected HX-Location to point to /signup/success, got: %s", loc)
 		}
 	})
 
-	t.Run("empty email", func(t *testing.T) {
-		var buf bytes.Buffer
-		log.SetOutput(&buf)
-		t.Cleanup(func() { log.SetOutput(nil) })
+	t.Run("invalid body redirects to failure", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", strings.NewReader("not json"))
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
 
+		c := NewUserClient(testBaseRoute)
+		c.register(w, r)
+
+		loc := w.Header().Get("HX-Location")
+		if !strings.Contains(loc, "/signup/failure") {
+			t.Errorf("expected HX-Location to point to /signup/failure, got: %s", loc)
+		}
+	})
+
+	t.Run("empty body redirects to failure", func(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", nil)
 		w := httptest.NewRecorder()
 
 		c := NewUserClient(testBaseRoute)
 		c.register(w, r)
 
-		if !strings.Contains(buf.String(), "email:") {
-			t.Errorf("expected log output, got: %s", buf.String())
+		loc := w.Header().Get("HX-Location")
+		if !strings.Contains(loc, "/signup/failure") {
+			t.Errorf("expected HX-Location to point to /signup/failure, got: %s", loc)
+		}
+	})
+}
+
+func TestRedirect(t *testing.T) {
+	t.Run("sets HX-Location header as JSON", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		resp := models.HTMXRedirectResponse{Path: "/signup/success", Target: "#hero-right"}
+
+		redirect(w, resp)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+
+		loc := w.Header().Get("HX-Location")
+		var parsed models.HTMXRedirectResponse
+		if err := json.Unmarshal([]byte(loc), &parsed); err != nil {
+			t.Fatalf("HX-Location was not valid JSON: %s", loc)
+		}
+		if parsed.Path != resp.Path {
+			t.Errorf("expected path %s, got %s", resp.Path, parsed.Path)
+		}
+		if parsed.Target != resp.Target {
+			t.Errorf("expected target %s, got %s", resp.Target, parsed.Target)
 		}
 	})
 }
