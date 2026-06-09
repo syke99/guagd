@@ -38,6 +38,17 @@ nav {
   -webkit-backdrop-filter: blur(12px);
 }
 
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-logo {
+  height: 36px;
+  width: auto;
+}
+
 .logo {
   font-size: 20px;
   font-weight: 900;
@@ -78,7 +89,7 @@ nav a:hover { color: var(--text); }
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 100px 56px 80px;
+  padding: 56px 56px 80px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 64px;

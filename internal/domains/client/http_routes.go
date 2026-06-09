@@ -13,12 +13,23 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		return map[string]http.HandlerFunc{}
 	}
 
+	assetsSub, err := fs.Sub(assets, "assets")
+	if err != nil {
+		log.Printf("error loading assets fs: %s", err)
+		return map[string]http.HandlerFunc{}
+	}
+
 	fileServer := http.FileServer(http.FS(sub))
+	assetsServer := http.FileServer(http.FS(assetsSub))
 	landingRoute := c.baseRoute + "landing/"
+	assetsRoute := c.baseRoute + "assets/"
 
 	return map[string]http.HandlerFunc{
 		landingRoute: func(w http.ResponseWriter, r *http.Request) {
 			http.StripPrefix(landingRoute, fileServer).ServeHTTP(w, r)
+		},
+		assetsRoute: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix(assetsRoute, assetsServer).ServeHTTP(w, r)
 		},
 		c.baseRoute + "signup":         c.signup,
 		c.baseRoute + "signup/success": c.signupSuccess,
