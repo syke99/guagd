@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gaugd — Verified Build History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <div class="logo">GAUG<span>D</span></div>
+  <div class="nav-right">
+    <a href="#features">Features</a>
+    <a href="#capture">Waitlist</a>
+    <button class="btn-nav">Get Early Access</button>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-left">
+    <div class="eyebrow">Coming Soon</div>
+    <h1>Your build.<br><em>Verified.</em></h1>
+    <p class="subhead">Gaugd is the trusted digital record for modified vehicles. Document every mod, share your build, and get your work verified by the shops that did it.</p>
+    <div class="cta-row">
+      <button class="btn-primary">Get Early Access</button>
+      <button class="btn-ghost">See how it works ↓</button>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="carousel">
+      <div class="carousel-track" id="track">
+
+        <!-- SLIDE 1: Build Card -->
+        <div class="carousel-slide">
+          <div class="build-card">
+            <div class="card-cover">
+              <div class="card-cover-inner">
+                <div class="card-cover-icon">📷</div>
+                <div class="card-cover-label">Cover Photo</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="build-card-header">
+                <div>
+                  <div class="build-car-name">2019 Subaru WRX STI</div>
+                  <div class="build-car-sub">Stage 2 Street Build</div>
+                </div>
+                <div class="build-stats">
+                  <div class="stat"><div class="stat-val">9</div><div class="stat-label">Mods</div></div>
+                  <div class="stat"><div class="stat-val">4</div><div class="stat-label">Verified</div></div>
+                </div>
+              </div>
+              <div class="mod-row">
+                <div><div class="mod-name">Cobb Accessport V3</div><div class="mod-meta">Installed at 38,210 mi · Jun 2023</div></div>
+                <span class="badge-verified">✓ Verified</span>
+              </div>
+              <div class="mod-row">
+                <div><div class="mod-name">ETS Front Mount Intercooler</div><div class="mod-meta">Installed at 41,880 mi · Oct 2023</div></div>
+                <span class="badge-verified">✓ Verified</span>
+              </div>
+              <div class="mod-row">
+                <div><div class="mod-name">KW V3 Coilovers</div><div class="mod-meta">Installed at 35,000 mi · Jan 2023</div></div>
+                <span class="badge-owner">Owner reported</span>
+              </div>
+              <div class="build-url">
+                <span>gaugd.com/builds/wrx-sti-john</span>
+                <button class="copy-btn">Copy</button>
+              </div>
+            </div>
+            <div class="photo-strip">
+              <div class="photo-thumb"></div>
+              <div class="photo-thumb"></div>
+              <div class="photo-thumb"></div>
+              <div class="photo-thumb-more">+9<small>photos</small></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 2: Garage -->
+        <div class="carousel-slide">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="panel-header-left">
+                <div class="panel-avatar">👤</div>
+                <div>
+                  <div class="panel-title">John's Garage</div>
+                  <div class="panel-sub">@jdm_john · Member since 2023</div>
+                </div>
+              </div>
+              <div class="panel-stat"><strong>4</strong> vehicles</div>
+            </div>
+            <div class="panel-grid">
+              <button class="grid-btn">
+                <div class="grid-btn-thumb"></div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">2019 Subaru WRX STI</div>
+                  <div class="grid-btn-meta">9 mods · 4 verified</div>
+                </div>
+              </button>
+              <button class="grid-btn">
+                <div class="grid-btn-thumb"></div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">2003 Nissan 350Z</div>
+                  <div class="grid-btn-meta">14 mods · 2 verified</div>
+                </div>
+              </button>
+              <button class="grid-btn">
+                <div class="grid-btn-thumb"></div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">2015 Ford Mustang GT</div>
+                  <div class="grid-btn-meta">6 mods · 6 verified</div>
+                </div>
+              </button>
+              <button class="grid-btn">
+                <div class="grid-btn-thumb"></div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">1994 Toyota Supra</div>
+                  <div class="grid-btn-meta">22 mods · 0 verified</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 3: Team -->
+        <div class="carousel-slide">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="panel-header-left">
+                <div class="panel-avatar">🏁</div>
+                <div>
+                  <div class="panel-title">Pacific NW Builds</div>
+                  <div class="panel-sub">Seattle, WA · Est. 2021</div>
+                </div>
+              </div>
+              <div class="panel-stat"><strong>12</strong> members</div>
+            </div>
+            <div class="panel-grid">
+              <button class="grid-btn">
+                <div class="grid-btn-thumb-avatar">👤</div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">@jdm_john</div>
+                  <div class="grid-btn-meta">4 vehicles</div>
+                </div>
+              </button>
+              <button class="grid-btn">
+                <div class="grid-btn-thumb-avatar">👤</div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">@turbo_sara</div>
+                  <div class="grid-btn-meta">2 vehicles</div>
+                </div>
+              </button>
+              <button class="grid-btn">
+                <div class="grid-btn-thumb-avatar">👤</div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">@evo_mike</div>
+                  <div class="grid-btn-meta">3 vehicles</div>
+                </div>
+              </button>
+              <button class="grid-btn">
+                <div class="grid-btn-thumb-avatar">👤</div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">@stance_alex</div>
+                  <div class="grid-btn-meta">1 vehicle</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end track -->
+    </div><!-- end carousel -->
+
+    <div class="carousel-nav">
+      <button class="carousel-dot active" onclick="goTo(0)"></button>
+      <button class="carousel-dot" onclick="goTo(1)"></button>
+      <button class="carousel-dot" onclick="goTo(2)"></button>
+    </div>
+    <div class="carousel-label" id="carousel-label">Build Card</div>
+  </div>
+
+  <script>
+    const labels = ['Build Card', 'Your Garage', 'Teams & Clubs'];
+    let current = 0;
+    let timer;
+
+    function goTo(index) {
+      current = index;
+      document.getElementById('track').style.transform = `translateX(-${index * 100}%)`;
+      document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === index));
+      document.getElementById('carousel-label').textContent = labels[index];
+      resetTimer();
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => goTo((current + 1) % 3), 4000);
+    }
+
+    resetTimer();
+  </script>
+</section>
+
+<section class="features" id="features">
+  <div class="feature">
+    <div class="feature-label">01 — Your Garage</div>
+    <h3>One home for every build</h3>
+    <p>Document mods, maintenance, installs, and costs in a structured profile built for enthusiasts — not spreadsheets.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-label">02 — Share Your Build</div>
+    <h3>A link that does the talking</h3>
+    <p>Every build gets a shareable URL. Drop it in a listing, bio, or auction and let the record speak for itself.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-label">03 — Teams & Clubs</div>
+    <h3>Find your crew</h3>
+    <p>Teams and clubs maintain a linked roster of member build cards. Your community, documented and connected.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-label">04 — Shop Verification</div>
+    <h3>Prove the work was done right</h3>
+    <p>Shops verify modifications directly on your build record. No more "trust me" — just proof.</p>
+    <span class="soon">Coming Soon</span>
+  </div>
+</section>
+
+<section class="capture" id="capture">
+  <h2>Stay in the loop.</h2>
+  <p>Gaugd is in development. Drop your email and we'll reach out when early access opens.</p>
+  <div class="email-form">
+    <input type="email" placeholder="your@email.com">
+    <button>Notify Me</button>
+  </div>
+  <p class="capture-note">No spam. Just one email when it's time.</p>
+</section>
+
+<footer>
+  <div class="logo" style="font-size:15px">GAUG<span>D</span></div>
+  <span>© 2025 Gaugd. All rights reserved.</span>
+</footer>
+
+</body>
+</html>
