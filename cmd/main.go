@@ -10,6 +10,7 @@ import (
 	"guagd/cmd/config"
 	"guagd/internal/domains/client"
 	"guagd/internal/domains/user"
+	"guagd/internal/pkg/db"
 	"guagd/internal/server"
 )
 
@@ -35,6 +36,11 @@ func main() {
 				return err
 			}
 
+			database, err := db.Connect(cfg.DatabaseURL)
+			if err != nil {
+				return err
+			}
+
 			mux := http.NewServeMux()
 
 			srv, err := server.NewServer(mux, cfg.ServerPort)
@@ -43,7 +49,7 @@ func main() {
 			}
 
 			clientDomain := client.NewClient("/")
-			userClient := user.NewUserClient("/users/")
+			userClient := user.NewUserClient("/users/", database)
 
 			srv.RegisterRoutes(clientDomain)
 			srv.RegisterRoutes(userClient)

@@ -15,14 +15,14 @@ import (
 const testBaseRoute = "/users/"
 
 func TestNewUserClient(t *testing.T) {
-	c := NewUserClient(testBaseRoute)
+	c := NewUserClient(testBaseRoute, nil)
 	if c == nil {
 		t.Fatal("expected non-nil userClient")
 	}
 }
 
 func TestHandlers(t *testing.T) {
-	c := NewUserClient(testBaseRoute)
+	c := NewUserClient(testBaseRoute, nil)
 	handlers := c.Handlers()
 
 	if len(handlers) == 0 {
@@ -47,7 +47,7 @@ func TestRegister(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
-		c := NewUserClient(testBaseRoute)
+		c := NewUserClient(testBaseRoute, nil)
 		c.register(w, r)
 
 		if !strings.Contains(buf.String(), "test@example.com") {
@@ -68,7 +68,7 @@ func TestRegister(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
-		c := NewUserClient(testBaseRoute)
+		c := NewUserClient(testBaseRoute, nil)
 		c.register(w, r)
 
 		loc := w.Header().Get("HX-Location")
@@ -81,7 +81,7 @@ func TestRegister(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", nil)
 		w := httptest.NewRecorder()
 
-		c := NewUserClient(testBaseRoute)
+		c := NewUserClient(testBaseRoute, nil)
 		c.register(w, r)
 
 		loc := w.Header().Get("HX-Location")

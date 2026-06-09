@@ -30,7 +30,11 @@ func (u *userClient) register(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("register: name=%s email=%s", payload.Name, payload.Email)
 
-	// TODO: persist user
+	if err := u.registerUser(r.Context(), payload.Name, payload.Email); err != nil {
+		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#hero-right"})
+		return
+	}
+
 	redirect(w, models.HTMXRedirectResponse{Path: "/signup/success", Target: "#hero-right"})
 }
 
