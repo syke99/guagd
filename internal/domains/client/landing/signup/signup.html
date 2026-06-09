@@ -1,0 +1,18 @@
+<div class="panel-card signup-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">Get Early Access</div>
+      <div class="panel-sub">Be first when Gaugd launches.</div>
+    </div>
+  </div>
+  <form hx-post="/users/register"
+        hx-ext="json-enc"
+        hx-target="#hero-right"
+        hx-swap="innerHTML">
+    <div class="signup-fields">
+      <input class="signup-input" type="text" name="name" placeholder="Your name" required />
+      <input class="signup-input" type="email" name="email" placeholder="your@email.com" required />
+      <button type="submit" class="btn-primary signup-submit">Get Early Access →</button>
+    </div>
+  </form>
+</div>
