@@ -16,15 +16,10 @@ func NewUserClient(baseRoute string, db db.DB) *userClient {
 }
 
 func (u *userClient) registerUser(ctx context.Context, name, email string) error {
-	// TODO: set up database and then
-	// TODO: be sure to pass the relevant pointers
-	// TODO: to the constructor
-	//
-	// return u.db.Exec(
-	// 	ctx,
-	// 	"INSERT INTO users (name, email) VALUES ($1, $2)",
-	// 	name,
-	// 	email,
-	// )
-	return nil
+	return u.db.Exec(
+		ctx,
+		"INSERT INTO users (name, email) VALUES ($1, $2)",
+		name,
+		email,
+	)
 }
