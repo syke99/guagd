@@ -3,27 +3,56 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/urfave/cli/v2"
+
+	"guagd/cmd/config"
 	"guagd/internal/domains/client"
 	"guagd/internal/domains/user"
 	"guagd/internal/server"
 )
 
 func main() {
-	mux := http.NewServeMux()
+	app := &cli.App{
+		Name: "guagd",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "config",
+				Usage: "path to a config file (json or yaml)",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			var cfg config.Config
+			var err error
 
-	srv, err := server.NewServer(mux, ":8080")
-	if err != nil {
-		log.Fatal(err)
+			if path := c.String("config"); path != "" {
+				cfg, err = config.Load(config.WithConfigFile(path))
+			} else {
+				cfg, err = config.Load()
+			}
+			if err != nil {
+				return err
+			}
+
+			mux := http.NewServeMux()
+
+			srv, err := server.NewServer(mux, cfg.ServerPort)
+			if err != nil {
+				return err
+			}
+
+			clientDomain := client.NewClient("/")
+			userClient := user.NewUserClient("/users/")
+
+			srv.RegisterRoutes(clientDomain)
+			srv.RegisterRoutes(userClient)
+
+			return srv.Serve()
+		},
 	}
 
-	clientDomain := client.NewClient("/")
-	userClient := user.NewUserClient("/users/")
-
-	srv.RegisterRoutes(clientDomain.Handlers())
-	srv.RegisterRoutes(userClient.Handlers())
-
-	if err := srv.Serve(); err != nil {
+	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -2,12 +2,13 @@ package server
 
 import (
 	"errors"
+	"guagd/internal/domains"
 	"log"
 	"net/http"
 )
 
 type Server interface {
-	RegisterRoutes(routes map[string]http.HandlerFunc) Server
+	RegisterRoutes(domain domains.Domain) Server
 	Serve() error
 }
 
@@ -28,8 +29,8 @@ func NewServer(mux *http.ServeMux, port string) (Server, error) {
 	return &server{mux: mux, port: port}, nil
 }
 
-func (s *server) RegisterRoutes(routes map[string]http.HandlerFunc) Server {
-	for route, handler := range routes {
+func (s *server) RegisterRoutes(domain domains.Domain) Server {
+	for route, handler := range domain.Handlers() {
 		if route == "" || handler == nil {
 			continue
 		}
