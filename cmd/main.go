@@ -48,7 +48,7 @@ func main() {
 				return err
 			}
 
-			clientDomain := client.NewClient("/", database)
+			clientDomain := client.NewClient("/", cfg.PublicURL, database)
 			userClient := user.NewUserClient("/users/", database)
 
 			srv.RegisterRoutes(clientDomain)

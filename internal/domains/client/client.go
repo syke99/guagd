@@ -16,11 +16,12 @@ var assets embed.FS
 
 type client struct {
 	baseRoute string
+	publicURL string
 	db        db.DB
 }
 
-func NewClient(baseRoute string, db db.DB) *client {
-	return &client{baseRoute: baseRoute, db: db}
+func NewClient(baseRoute string, publicURL string, db db.DB) *client {
+	return &client{baseRoute: baseRoute, publicURL: publicURL, db: db}
 }
 
 func newVisitorID() string {

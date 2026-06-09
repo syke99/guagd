@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -62,6 +63,11 @@ func (c *client) signupFailure(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {
+	if ref := r.Referer(); c.publicURL != "" && !strings.HasPrefix(ref, c.publicURL) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	cookie, err := r.Cookie("visitor_id")
 	if err != nil {
 		w.WriteHeader(http.StatusNoContent)
@@ -70,7 +76,14 @@ func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.db.Exec(
 		r.Context(),
-		"INSERT INTO page_events (visitor_id, event) VALUES ($1, $2)",
+		`INSERT INTO page_events (visitor_id, event)
+		 SELECT $1, $2
+		 WHERE NOT EXISTS (
+		   SELECT 1 FROM page_events
+		   WHERE visitor_id = $1
+		   AND event = 'visit'
+		   AND created_at > now() - interval '24 hours'
+		 )`,
 		cookie.Value,
 		"visit",
 	); err != nil {
