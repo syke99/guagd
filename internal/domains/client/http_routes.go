@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"time"
 )
 
 func (c *client) Handlers() map[string]http.HandlerFunc {
@@ -26,6 +27,16 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 
 	return map[string]http.HandlerFunc{
 		landingRoute: func(w http.ResponseWriter, r *http.Request) {
+			if _, err := r.Cookie("visitor_id"); err != nil {
+				http.SetCookie(w, &http.Cookie{
+					Name:     "visitor_id",
+					Value:    newVisitorID(),
+					Path:     "/",
+					Expires:  time.Now().Add(365 * 24 * time.Hour),
+					HttpOnly: false,
+					SameSite: http.SameSiteLaxMode,
+				})
+			}
 			http.StripPrefix(landingRoute, fileServer).ServeHTTP(w, r)
 		},
 		assetsRoute: func(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +45,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		c.baseRoute + "signup":         c.signup,
 		c.baseRoute + "signup/success": c.signupSuccess,
 		c.baseRoute + "signup/failure": c.signupFailure,
+		c.baseRoute + "track/visit":    c.trackVisit,
 	}
 }
 
@@ -47,4 +59,23 @@ func (c *client) signupSuccess(w http.ResponseWriter, r *http.Request) {
 
 func (c *client) signupFailure(w http.ResponseWriter, r *http.Request) {
 	http.ServeFileFS(w, r, landing, "landing/signup/failure.html")
+}
+
+func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("visitor_id")
+	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if err := c.db.Exec(
+		r.Context(),
+		"INSERT INTO page_events (visitor_id, event) VALUES ($1, $2)",
+		cookie.Value,
+		"visit",
+	); err != nil {
+		log.Printf("track visit: %s", err)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

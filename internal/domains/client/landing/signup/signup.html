@@ -5,14 +5,22 @@
       <div class="panel-sub">Be first when Gaugd launches.</div>
     </div>
   </div>
-  <form hx-post="/users/register"
+  <form id="signup-form"
+        hx-post="/users/register"
         hx-ext="json-enc"
         hx-target="#hero-right"
         hx-swap="innerHTML">
     <div class="signup-fields">
       <input class="signup-input" type="text" name="name" placeholder="Your name" required />
       <input class="signup-input" type="email" name="email" placeholder="your@email.com" required />
+      <input type="hidden" name="visitor_id" id="visitor-id-field" />
       <button type="submit" class="btn-primary signup-submit">Get Early Access →</button>
     </div>
   </form>
+  <script>
+    (function() {
+      var match = document.cookie.match(/(?:^|;\s*)visitor_id=([^;]+)/);
+      if (match) document.getElementById('visitor-id-field').value = decodeURIComponent(match[1]);
+    })();
+  </script>
 </div>
