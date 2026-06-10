@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"guagd/cmd/auth"
 	"guagd/cmd/config"
 	"guagd/internal/domains/client"
 	"guagd/internal/domains/user"
@@ -47,6 +48,8 @@ func main() {
 			if err != nil {
 				return err
 			}
+
+			auth.Connect(cfg.SuperTokensDBURL, cfg.SuperTokensAPIKey)
 
 			clientDomain := client.NewClient("/", cfg.PublicURL, database)
 			userClient := user.NewUserClient("/api/v1/users/", database)

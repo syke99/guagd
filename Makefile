@@ -1,6 +1,6 @@
-CONFIG     ?= environment.json
-DB_URL     ?= $(shell jq -r '.DATABASE_URL' $(CONFIG))
-ST_CONTAINER = guagd-supertokens
+CONFIG        ?= environment.json
+ST_DB_URL     ?= $(shell jq -r '.SUPERTOKENS_DB_URL' $(CONFIG))
+ST_CONTAINER   = guagd-supertokens
 
 .PHONY: dev app supertokens stop logs
 
@@ -12,7 +12,7 @@ supertokens:
 	else \
 		docker run -d --name $(ST_CONTAINER) \
 			-p 3567:3567 \
-			-e POSTGRESQL_CONNECTION_URI="$(DB_URL)" \
+			-e POSTGRESQL_CONNECTION_URI="$(ST_DB_URL)" \
 			supertokens/supertokens-postgresql:latest; \
 	fi
 	@echo "waiting for supertokens..." && until curl -sf http://localhost:3567/hello >/dev/null; do sleep 1; done && echo "supertokens ready"
