@@ -29,12 +29,26 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		return map[string]http.HandlerFunc{}
 	}
 
+	appSub, err := fs.Sub(app, "app")
+	if err != nil {
+		log.Printf("error loading app fs: %s", err)
+		return map[string]http.HandlerFunc{}
+	}
+
 	fileServer := http.FileServer(http.FS(sub))
 	assetsServer := http.FileServer(http.FS(assetsSub))
+	appServer := http.FileServer(http.FS(appSub))
 	landingRoute := prefixRoute(c.baseRoute, "landing/")
 	assetsRoute := prefixRoute(c.baseRoute, "assets/")
+	appRoute := prefixRoute(c.baseRoute, "app/")
 
 	return map[string]http.HandlerFunc{
+		"/": func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFileFS(w, r, app, "app/index.html")
+		},
+		appRoute: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix(appRoute, appServer).ServeHTTP(w, r)
+		},
 		landingRoute: func(w http.ResponseWriter, r *http.Request) {
 			if _, err := r.Cookie("visitor_id"); err != nil {
 				http.SetCookie(w, &http.Cookie{

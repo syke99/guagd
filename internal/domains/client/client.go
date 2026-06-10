@@ -14,6 +14,9 @@ var landing embed.FS
 //go:embed all:assets
 var assets embed.FS
 
+//go:embed all:app
+var app embed.FS
+
 type client struct {
 	baseRoute string
 	publicURL string
