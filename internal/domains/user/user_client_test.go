@@ -39,8 +39,8 @@ func TestHandlers(t *testing.T) {
 		t.Fatal("expected at least one handler")
 	}
 
-	if _, ok := handlers[testBaseRoute+"addWaitlist"]; !ok {
-		t.Errorf("expected handlers to contain '%s'", testBaseRoute+"addWaitlist")
+	if _, ok := handlers[testBaseRoute+"waitlist/add"]; !ok {
+		t.Errorf("expected handlers to contain '%s'", testBaseRoute+"waitlist/add")
 	}
 }
 

@@ -49,7 +49,7 @@ func main() {
 			}
 
 			clientDomain := client.NewClient("/", cfg.PublicURL, database)
-			userClient := user.NewUserClient("/users/", database)
+			userClient := user.NewUserClient("api/v1/users/", database)
 
 			srv.RegisterRoutes(clientDomain)
 			srv.RegisterRoutes(userClient)

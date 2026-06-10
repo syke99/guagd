@@ -14,7 +14,7 @@ func prefixRoute(prefix, route string) string {
 
 func (u *userClient) Handlers() map[string]http.HandlerFunc {
 	routes := map[string]http.HandlerFunc{
-		prefixRoute(u.baseRoute, "addWaitlist"): u.addWaitlist,
+		prefixRoute(u.baseRoute, "waitlist/add"): u.addWaitlist,
 	}
 
 	return routes
