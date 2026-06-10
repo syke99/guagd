@@ -1,0 +1,49 @@
+<div>
+
+<nav>
+  <div class="nav-brand">
+    <img src="/assets/logo.png" alt="Gaugd" class="nav-logo">
+    <div class="logo">GAUG<span>D</span></div>
+  </div>
+  <div class="nav-right">
+    <a href="#"
+       hx-get="/landing/landing.html"
+       hx-target="#app"
+       hx-swap="innerHTML"
+       hx-push-url="/">Home</a>
+  </div>
+</nav>
+
+<section class="auth-page">
+  <div class="panel-card auth-card">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Sign in to Gaugd</div>
+        <div class="panel-sub">Your verified build history awaits.</div>
+      </div>
+    </div>
+    <form hx-post="/api/v1/users/signin"
+          hx-ext="json-enc"
+          hx-target="#signin-result"
+          hx-swap="innerHTML">
+      <div class="signup-fields">
+        <input class="signup-input" type="email" name="email" placeholder="your@email.com" required />
+        <input class="signup-input" type="password" name="password" placeholder="Password" required />
+        <button type="submit" class="btn-primary signup-submit">Sign In →</button>
+      </div>
+    </form>
+    <div id="signin-result"></div>
+    <div class="auth-footer">
+      <span class="auth-footer-text">Don't have an account?</span>
+      <button class="btn-link"
+              hx-get="/landing/landing.html"
+              hx-target="#app"
+              hx-swap="innerHTML"
+              hx-push-url="/">
+        Request Early Access →
+      </button>
+    </div>
+  </div>
+</section>
+
+</div>

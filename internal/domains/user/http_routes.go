@@ -15,6 +15,7 @@ func prefixRoute(prefix, route string) string {
 func (u *userClient) Handlers() map[string]http.HandlerFunc {
 	routes := map[string]http.HandlerFunc{
 		prefixRoute(u.baseRoute, "waitlist/add"): u.addWaitlist,
+		prefixRoute(u.baseRoute, "signin"):       u.signIn,
 	}
 
 	return routes
@@ -36,6 +37,20 @@ func (u *userClient) addWaitlist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	redirect(w, models.HTMXRedirectResponse{Path: "/signup/success", Target: "#hero-right"})
+}
+
+func (u *userClient) signIn(w http.ResponseWriter, r *http.Request) {
+	var payload models.UserSignInPayload
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
+		return
+	}
+
+	log.Printf("signIn: email=%s", payload.Email)
+
+	// SuperTokens auth wired up in next step — reject for now
+	redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
 }
 
 func redirect(w http.ResponseWriter, resp models.HTMXRedirectResponse) {

@@ -68,7 +68,9 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		prefixRoute(c.baseRoute, "signup"):         c.signup,
 		prefixRoute(c.baseRoute, "signup/success"): c.signupSuccess,
 		prefixRoute(c.baseRoute, "signup/failure"): c.signupFailure,
-		prefixRoute(c.baseRoute, "track/visit"):    c.trackVisit,
+		prefixRoute(c.baseRoute, "signin"):          c.signinPage,
+		prefixRoute(c.baseRoute, "signin/failure"):  c.signinFailure,
+		prefixRoute(c.baseRoute, "track/visit"):     c.trackVisit,
 	}
 }
 
@@ -82,6 +84,14 @@ func (c *client) signupSuccess(w http.ResponseWriter, r *http.Request) {
 
 func (c *client) signupFailure(w http.ResponseWriter, r *http.Request) {
 	http.ServeFileFS(w, r, landing, "landing/signup/failure.html")
+}
+
+func (c *client) signinPage(w http.ResponseWriter, r *http.Request) {
+	http.ServeFileFS(w, r, landing, "landing/signin/signin.html")
+}
+
+func (c *client) signinFailure(w http.ResponseWriter, r *http.Request) {
+	http.ServeFileFS(w, r, landing, "landing/signin/failure.html")
 }
 
 func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {

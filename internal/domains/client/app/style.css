@@ -806,6 +806,46 @@ footer span { font-size: 13px; color: var(--muted); }
   max-width: 280px;
 }
 
+/* AUTH PAGE */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 77px);
+  padding: 40px 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-footer-text {
+  font-size: 13px;
+  color: var(--muted2);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+.btn-link:hover { color: var(--accent2); }
+
 /* RESPONSIVE */
 
 @media (max-width: 1024px) {
