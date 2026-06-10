@@ -1,4 +1,4 @@
-package user
+package account
 
 import (
 	"bytes"
@@ -22,17 +22,17 @@ func (m *mockDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) er
 
 var _ db.DB = (*mockDB)(nil)
 
-const testBaseRoute = "/users/"
+const testBaseRoute = "/accounts/"
 
-func TestNewUserClient(t *testing.T) {
-	c := NewUserClient(testBaseRoute, nil)
+func TestNewAccountClient(t *testing.T) {
+	c := NewAccountClient(testBaseRoute, nil)
 	if c == nil {
-		t.Fatal("expected non-nil userClient")
+		t.Fatal("expected non-nil accountClient")
 	}
 }
 
 func TestHandlers(t *testing.T) {
-	c := NewUserClient(testBaseRoute, nil)
+	c := NewAccountClient(testBaseRoute, nil)
 	handlers := c.Handlers()
 
 	if len(handlers) == 0 {
@@ -57,7 +57,7 @@ func TestAddWaitlist(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
-		c := NewUserClient(testBaseRoute, &mockDB{})
+		c := NewAccountClient(testBaseRoute, &mockDB{})
 		c.addWaitlist(w, r)
 
 		if !strings.Contains(buf.String(), "test@example.com") {
@@ -78,7 +78,7 @@ func TestAddWaitlist(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
-		c := NewUserClient(testBaseRoute, nil)
+		c := NewAccountClient(testBaseRoute, nil)
 		c.addWaitlist(w, r)
 
 		loc := w.Header().Get("HX-Location")
@@ -91,7 +91,7 @@ func TestAddWaitlist(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"addWaitlist", nil)
 		w := httptest.NewRecorder()
 
-		c := NewUserClient(testBaseRoute, nil)
+		c := NewAccountClient(testBaseRoute, nil)
 		c.addWaitlist(w, r)
 
 		loc := w.Header().Get("HX-Location")

@@ -11,8 +11,8 @@ import (
 
 	"guagd/cmd/auth"
 	"guagd/cmd/config"
+	"guagd/internal/domains/account"
 	"guagd/internal/domains/client"
-	"guagd/internal/domains/user"
 	"guagd/internal/pkg/db"
 	"guagd/internal/server"
 )
@@ -54,10 +54,10 @@ func main() {
 			auth.Init(cfg.SuperTokensCoreURL, cfg.PublicURL, cfg.SuperTokensAPIKey)
 
 			clientDomain := client.NewClient("/", cfg.PublicURL, database)
-			userClient := user.NewUserClient("/api/v1/users/", database)
+			accountClient := account.NewAccountClient("/api/v1/accounts/", database)
 
 			srv.RegisterRoutes(clientDomain)
-			srv.RegisterRoutes(userClient)
+			srv.RegisterRoutes(accountClient)
 			srv.Wrap(supertokens.Middleware)
 
 			return srv.Serve()

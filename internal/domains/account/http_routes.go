@@ -1,4 +1,4 @@
-package user
+package account
 
 import (
 	"encoding/json"
@@ -16,7 +16,7 @@ func prefixRoute(prefix, route string) string {
 	return strings.TrimRight(prefix, "/") + "/" + route
 }
 
-func (u *userClient) Handlers() map[string]http.HandlerFunc {
+func (u *accountClient) Handlers() map[string]http.HandlerFunc {
 	routes := map[string]http.HandlerFunc{
 		prefixRoute(u.baseRoute, "waitlist/add"): u.addWaitlist,
 		prefixRoute(u.baseRoute, "signup"):       u.signUp,
@@ -26,7 +26,7 @@ func (u *userClient) Handlers() map[string]http.HandlerFunc {
 	return routes
 }
 
-func (u *userClient) addWaitlist(w http.ResponseWriter, r *http.Request) {
+func (u *accountClient) addWaitlist(w http.ResponseWriter, r *http.Request) {
 	var payload models.UserRegisterPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -44,7 +44,7 @@ func (u *userClient) addWaitlist(w http.ResponseWriter, r *http.Request) {
 	redirect(w, models.HTMXRedirectResponse{Path: "/waitlist/success", Target: "#hero-right"})
 }
 
-func (u *userClient) signUp(w http.ResponseWriter, r *http.Request) {
+func (u *accountClient) signUp(w http.ResponseWriter, r *http.Request) {
 	var payload models.UserSignUpPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -88,7 +88,7 @@ func (u *userClient) signUp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (u *userClient) signIn(w http.ResponseWriter, r *http.Request) {
+func (u *accountClient) signIn(w http.ResponseWriter, r *http.Request) {
 	var payload models.UserSignInPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {

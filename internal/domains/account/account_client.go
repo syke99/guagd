@@ -1,4 +1,4 @@
-package user
+package account
 
 import (
 	"context"
@@ -9,16 +9,16 @@ import (
 	"guagd/internal/pkg/db"
 )
 
-type userClient struct {
+type accountClient struct {
 	baseRoute string
 	db        db.DB
 }
 
-func NewUserClient(baseRoute string, db db.DB) *userClient {
-	return &userClient{baseRoute: baseRoute, db: db}
+func NewAccountClient(baseRoute string, db db.DB) *accountClient {
+	return &accountClient{baseRoute: baseRoute, db: db}
 }
 
-func (u *userClient) createAccount(ctx context.Context, supertokensID, username, email, acctType string) error {
+func (u *accountClient) createAccount(ctx context.Context, supertokensID, username, email, acctType string) error {
 	return u.db.Exec(
 		ctx,
 		`INSERT INTO accounts (supertokens_id, username, email, acct_type)
@@ -34,7 +34,7 @@ func (u *userClient) createAccount(ctx context.Context, supertokensID, username,
 	)
 }
 
-func (u *userClient) registerUser(ctx context.Context, name, email, visitorId string) error {
+func (u *accountClient) registerUser(ctx context.Context, name, email, visitorId string) error {
 	return u.db.Exec(
 		ctx,
 		"INSERT INTO accounts (name, email, visitor_id) VALUES ($1, $2, $3)",
@@ -49,7 +49,7 @@ type accountInfo struct {
 	AcctType string
 }
 
-func (u *userClient) getAccountBySupertokensID(ctx context.Context, supertokensID string) (accountInfo, error) {
+func (u *accountClient) getAccountBySupertokensID(ctx context.Context, supertokensID string) (accountInfo, error) {
 	var info accountInfo
 	err := u.db.QueryRow(ctx,
 		"SELECT username, acct_type FROM accounts WHERE supertokens_id = $1",

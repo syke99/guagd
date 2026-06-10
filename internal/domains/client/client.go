@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"guagd/internal/domains/client/pages/garage"
+	"guagd/internal/domains/client/pages/hq"
 	"guagd/internal/pkg/db"
 )
 
@@ -23,6 +24,7 @@ type client struct {
 	publicURL string
 	db        db.DB
 	garage    *garage.GarageClient
+	hq        *hq.HQClient
 }
 
 func NewClient(baseRoute string, publicURL string, db db.DB) *client {
@@ -31,6 +33,7 @@ func NewClient(baseRoute string, publicURL string, db db.DB) *client {
 		publicURL: publicURL,
 		db:        db,
 		garage:    garage.NewGarageClient(db),
+		hq:        hq.NewHQClient(db),
 	}
 }
 

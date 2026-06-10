@@ -81,6 +81,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		"/garage/{username}":                       c.garage.GaragePage,
 		"/api/v1/garage/layout":                    middleware.RequireAuth(c.garage.SaveLayout),
 		"/api/v1/garage/theme":                     middleware.RequireAuth(c.garage.SaveTheme),
+		"/hq/{username}":                           c.hq.HQPage,
 	}
 
 	return routes
