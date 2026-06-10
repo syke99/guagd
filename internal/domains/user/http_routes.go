@@ -5,19 +5,19 @@ import (
 	"guagd/internal/pkg/models"
 	"log"
 	"net/http"
+	"strings"
 )
+
+func prefixRoute(prefix, route string) string {
+	return strings.TrimRight(prefix, "/") + "/" + route
+}
 
 func (u *userClient) Handlers() map[string]http.HandlerFunc {
 	routes := map[string]http.HandlerFunc{
-		"addWaitlist": u.addWaitlist,
+		prefixRoute(u.baseRoute, "addWaitlist"): u.addWaitlist,
 	}
 
-	prefixed := make(map[string]http.HandlerFunc, len(routes))
-	for route, handler := range routes {
-		prefixed[u.baseRoute+route] = handler
-	}
-
-	return prefixed
+	return routes
 }
 
 func (u *userClient) addWaitlist(w http.ResponseWriter, r *http.Request) {

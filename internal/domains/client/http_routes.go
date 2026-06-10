@@ -1,12 +1,20 @@
 package client
 
 import (
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 )
+
+func prefixRoute(prefix, route string) string {
+	if prefix == "/" {
+		prefix = ""
+	}
+	return fmt.Sprintf("%s/%s", prefix, route)
+}
 
 func (c *client) Handlers() map[string]http.HandlerFunc {
 	sub, err := fs.Sub(landing, "landing")
@@ -23,8 +31,8 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 
 	fileServer := http.FileServer(http.FS(sub))
 	assetsServer := http.FileServer(http.FS(assetsSub))
-	landingRoute := c.baseRoute + "landing/"
-	assetsRoute := c.baseRoute + "assets/"
+	landingRoute := prefixRoute(c.baseRoute, "landing/")
+	assetsRoute := prefixRoute(c.baseRoute, "assets/")
 
 	return map[string]http.HandlerFunc{
 		landingRoute: func(w http.ResponseWriter, r *http.Request) {
@@ -43,10 +51,10 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		assetsRoute: func(w http.ResponseWriter, r *http.Request) {
 			http.StripPrefix(assetsRoute, assetsServer).ServeHTTP(w, r)
 		},
-		c.baseRoute + "signup":         c.signup,
-		c.baseRoute + "signup/success": c.signupSuccess,
-		c.baseRoute + "signup/failure": c.signupFailure,
-		c.baseRoute + "track/visit":    c.trackVisit,
+		prefixRoute(c.baseRoute, "signup"):         c.signup,
+		prefixRoute(c.baseRoute, "signup/success"): c.signupSuccess,
+		prefixRoute(c.baseRoute, "signup/failure"): c.signupFailure,
+		prefixRoute(c.baseRoute, "track/visit"):    c.trackVisit,
 	}
 }
 
