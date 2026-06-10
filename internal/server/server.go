@@ -9,12 +9,14 @@ import (
 
 type Server interface {
 	RegisterRoutes(domain domains.Domain) Server
+	Wrap(middleware func(http.Handler) http.Handler) Server
 	Serve() error
 }
 
 type server struct {
-	mux  *http.ServeMux
-	port string
+	mux     *http.ServeMux
+	handler http.Handler
+	port    string
 }
 
 func NewServer(mux *http.ServeMux, port string) (Server, error) {
@@ -39,7 +41,16 @@ func (s *server) RegisterRoutes(domain domains.Domain) Server {
 	return s
 }
 
+func (s *server) Wrap(middleware func(http.Handler) http.Handler) Server {
+	s.handler = middleware(s.mux)
+	return s
+}
+
 func (s *server) Serve() error {
 	log.Printf("Listening on %s", s.port)
-	return http.ListenAndServe(s.port, s.mux)
+	h := s.handler
+	if h == nil {
+		h = s.mux
+	}
+	return http.ListenAndServe(s.port, h)
 }

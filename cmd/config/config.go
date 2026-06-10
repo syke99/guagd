@@ -18,7 +18,8 @@ type Config struct {
 	ServerPort string `json:"SERVER_PORT" yaml:"SERVER_PORT" env:"SERVER_PORT"`
 	PublicURL  string `json:"PUBLIC_URL"  yaml:"PUBLIC_URL"  env:"PUBLIC_URL"`
 	// Auth
-	SuperTokensAPIKey string `json:"SUPER_TOKENS_API_KEY" yaml:"SUPER_TOKENS_API_KEY" env:"SUPER_TOKENS_API_KEY"`
+	SuperTokensCoreURL string `json:"SUPERTOKENS_CORE_URL"  yaml:"SUPERTOKENS_CORE_URL"  env:"SUPERTOKENS_CORE_URL"`
+	SuperTokensAPIKey  string `json:"SUPER_TOKENS_API_KEY" yaml:"SUPER_TOKENS_API_KEY" env:"SUPER_TOKENS_API_KEY"`
 }
 
 type LoadOption func(*loadOptions)

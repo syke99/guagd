@@ -7,6 +7,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/supertokens/supertokens-golang/supertokens"
+
 	"guagd/cmd/auth"
 	"guagd/cmd/config"
 	"guagd/internal/domains/client"
@@ -49,13 +51,14 @@ func main() {
 				return err
 			}
 
-			auth.Connect(cfg.SuperTokensDBURL, cfg.SuperTokensAPIKey)
+			auth.Init(cfg.SuperTokensCoreURL, cfg.PublicURL, cfg.SuperTokensAPIKey)
 
 			clientDomain := client.NewClient("/", cfg.PublicURL, database)
 			userClient := user.NewUserClient("/api/v1/users/", database)
 
 			srv.RegisterRoutes(clientDomain)
 			srv.RegisterRoutes(userClient)
+			srv.Wrap(supertokens.Middleware)
 
 			return srv.Serve()
 		},

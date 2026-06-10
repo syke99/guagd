@@ -2,10 +2,14 @@ package user
 
 import (
 	"encoding/json"
-	"guagd/internal/pkg/models"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+
+	"guagd/internal/pkg/models"
 )
 
 func prefixRoute(prefix, route string) string {
@@ -49,8 +53,20 @@ func (u *userClient) signIn(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("signIn: email=%s", payload.Email)
 
-	// SuperTokens auth wired up in next step — reject for now
-	redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
+	result, err := emailpassword.SignIn("public", payload.Email, payload.Password)
+	if err != nil || result.WrongCredentialsError != nil {
+		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
+		return
+	}
+
+	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, nil, nil); err != nil {
+		log.Printf("signIn: create session: %s", err)
+		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
+		return
+	}
+
+	w.Header().Set("HX-Redirect", "/garage")
+	w.WriteHeader(http.StatusOK)
 }
 
 func redirect(w http.ResponseWriter, resp models.HTMXRedirectResponse) {
