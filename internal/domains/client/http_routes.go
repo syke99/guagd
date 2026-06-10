@@ -10,6 +10,8 @@ import (
 
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+
+	"guagd/internal/pkg/middleware"
 )
 
 func prefixRoute(prefix, route string) string {
@@ -45,7 +47,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 	assetsRoute := prefixRoute(c.baseRoute, "assets/")
 	appRoute := prefixRoute(c.baseRoute, "app/")
 
-	return map[string]http.HandlerFunc{
+	routes := map[string]http.HandlerFunc{
 		"/": func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFileFS(w, r, app, "app/index.html")
 		},
@@ -75,8 +77,13 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		prefixRoute(c.baseRoute, "signup/failure"):   c.signupFailure,
 		prefixRoute(c.baseRoute, "signin"):           c.signinPage,
 		prefixRoute(c.baseRoute, "signin/failure"):   c.signinFailure,
-		prefixRoute(c.baseRoute, "track/visit"):      c.trackVisit,
+		prefixRoute(c.baseRoute, "track/visit"):   c.trackVisit,
+		"/garage/{username}":                       c.garage.GaragePage,
+		"/api/v1/garage/layout":                    middleware.RequireAuth(c.garage.SaveLayout),
+		"/api/v1/garage/theme":                     middleware.RequireAuth(c.garage.SaveTheme),
 	}
+
+	return routes
 }
 
 func (c *client) waitlist(w http.ResponseWriter, r *http.Request) {

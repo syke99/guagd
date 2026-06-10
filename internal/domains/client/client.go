@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 
+	"guagd/internal/domains/client/garage"
 	"guagd/internal/pkg/db"
 )
 
@@ -21,10 +22,16 @@ type client struct {
 	baseRoute string
 	publicURL string
 	db        db.DB
+	garage    *garage.GarageClient
 }
 
 func NewClient(baseRoute string, publicURL string, db db.DB) *client {
-	return &client{baseRoute: baseRoute, publicURL: publicURL, db: db}
+	return &client{
+		baseRoute: baseRoute,
+		publicURL: publicURL,
+		db:        db,
+		garage:    garage.NewGarageClient(db),
+	}
 }
 
 func newVisitorID() string {
