@@ -14,8 +14,8 @@ type Config struct {
 	// Database
 	DatabaseURL string `json:"DATABASE_URL" yaml:"DATABASE_URL" env:"DATABASE_URL"`
 	// Base Server
-	ServerPort  string `json:"SERVER_PORT"  yaml:"SERVER_PORT"  env:"SERVER_PORT"`
-	PublicURL   string `json:"PUBLIC_URL"   yaml:"PUBLIC_URL"   env:"PUBLIC_URL"`
+	ServerPort string `json:"SERVER_PORT" yaml:"SERVER_PORT" env:"SERVER_PORT"`
+	PublicURL  string `json:"PUBLIC_URL"  yaml:"PUBLIC_URL"  env:"PUBLIC_URL"`
 }
 
 type LoadOption func(*loadOptions)

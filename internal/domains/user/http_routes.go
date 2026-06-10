@@ -9,7 +9,7 @@ import (
 
 func (u *userClient) Handlers() map[string]http.HandlerFunc {
 	routes := map[string]http.HandlerFunc{
-		"register": u.register,
+		"addWaitlist": u.addWaitlist,
 	}
 
 	prefixed := make(map[string]http.HandlerFunc, len(routes))
@@ -20,7 +20,7 @@ func (u *userClient) Handlers() map[string]http.HandlerFunc {
 	return prefixed
 }
 
-func (u *userClient) register(w http.ResponseWriter, r *http.Request) {
+func (u *userClient) addWaitlist(w http.ResponseWriter, r *http.Request) {
 	var payload models.UserRegisterPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -28,7 +28,7 @@ func (u *userClient) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("register: name=%s email=%s visitor_id=%s", payload.Name, payload.Email, payload.VisitorID)
+	log.Printf("addWaitlist: name=%s email=%s visitor_id=%s", payload.Name, payload.Email, payload.VisitorID)
 
 	if err := u.registerUser(r.Context(), payload.Name, payload.Email, payload.VisitorID); err != nil {
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#hero-right"})

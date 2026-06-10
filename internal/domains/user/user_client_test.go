@@ -2,6 +2,7 @@ package user
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,8 +10,17 @@ import (
 	"strings"
 	"testing"
 
+	"guagd/internal/pkg/db"
 	"guagd/internal/pkg/models"
 )
+
+type mockDB struct{}
+
+func (m *mockDB) Exec(_ context.Context, _ string, _ ...any) error                  { return nil }
+func (m *mockDB) Query(_ context.Context, _ string, _ db.Results, _ ...any) error   { return nil }
+func (m *mockDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return nil }
+
+var _ db.DB = (*mockDB)(nil)
 
 const testBaseRoute = "/users/"
 
@@ -29,12 +39,12 @@ func TestHandlers(t *testing.T) {
 		t.Fatal("expected at least one handler")
 	}
 
-	if _, ok := handlers[testBaseRoute+"register"]; !ok {
-		t.Errorf("expected handlers to contain '%s'", testBaseRoute+"register")
+	if _, ok := handlers[testBaseRoute+"addWaitlist"]; !ok {
+		t.Errorf("expected handlers to contain '%s'", testBaseRoute+"addWaitlist")
 	}
 }
 
-func TestRegister(t *testing.T) {
+func TestAddWaitlist(t *testing.T) {
 	t.Run("logs name and email and redirects to success", func(t *testing.T) {
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
@@ -43,12 +53,12 @@ func TestRegister(t *testing.T) {
 		payload := models.UserRegisterPayload{Name: "Test User", Email: "test@example.com"}
 		body, _ := json.Marshal(payload)
 
-		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", bytes.NewReader(body))
+		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"addWaitlist", bytes.NewReader(body))
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
-		c := NewUserClient(testBaseRoute, nil)
-		c.register(w, r)
+		c := NewUserClient(testBaseRoute, &mockDB{})
+		c.addWaitlist(w, r)
 
 		if !strings.Contains(buf.String(), "test@example.com") {
 			t.Errorf("expected log to contain email, got: %s", buf.String())
@@ -64,12 +74,12 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("invalid body redirects to failure", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", strings.NewReader("not json"))
+		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"addWaitlist", strings.NewReader("not json"))
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
 		c := NewUserClient(testBaseRoute, nil)
-		c.register(w, r)
+		c.addWaitlist(w, r)
 
 		loc := w.Header().Get("HX-Location")
 		if !strings.Contains(loc, "/signup/failure") {
@@ -78,11 +88,11 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("empty body redirects to failure", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"register", nil)
+		r := httptest.NewRequest(http.MethodPost, testBaseRoute+"addWaitlist", nil)
 		w := httptest.NewRecorder()
 
 		c := NewUserClient(testBaseRoute, nil)
-		c.register(w, r)
+		c.addWaitlist(w, r)
 
 		loc := w.Header().Get("HX-Location")
 		if !strings.Contains(loc, "/signup/failure") {
