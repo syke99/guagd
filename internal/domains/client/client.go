@@ -5,11 +5,11 @@ import (
 	"embed"
 	"fmt"
 
-	"guagd/internal/domains/client/garage"
+	"guagd/internal/domains/client/pages/garage"
 	"guagd/internal/pkg/db"
 )
 
-//go:embed all:landing
+//go:embed all:pages/landing
 var landing embed.FS
 
 //go:embed all:assets

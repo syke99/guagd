@@ -1,0 +1,110 @@
+<div>
+
+<nav>
+  <div class="nav-brand">
+    <img src="/assets/logo.png" alt="Gaugd" class="nav-logo">
+    <div class="logo">GAUG<span>D</span></div>
+  </div>
+  <div class="nav-right">
+    <a href="#"
+       hx-get="/landing/landing.html"
+       hx-target="#app"
+       hx-swap="innerHTML"
+       hx-push-url="/">Home</a>
+  </div>
+</nav>
+
+<section class="auth-page">
+  <div class="panel-card auth-card">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Create your account</div>
+        <div class="panel-sub">Start building your verified history.</div>
+      </div>
+    </div>
+    <form hx-post="/api/v1/users/signup"
+          hx-ext="json-enc"
+          hx-target="#signup-result"
+          hx-swap="innerHTML">
+      <div class="signup-fields">
+        <div class="acct-type-picker">
+          <button type="button" class="acct-type-card acct-type-card--active" data-type="driver" onclick="selectAcctType('driver')">
+            <div class="acct-type-label">Driver</div>
+            <div class="acct-type-desc">Individual build history &amp; garage</div>
+          </button>
+          <button type="button" class="acct-type-card" data-type="club" onclick="selectAcctType('club')">
+            <div class="acct-type-label">Club</div>
+            <div class="acct-type-desc">Team or club headquarters</div>
+          </button>
+        </div>
+        <input type="hidden" name="acct_type" id="acct-type-input" value="driver" />
+        <input class="signup-input" type="email" name="email" placeholder="your@email.com" required />
+        <input class="signup-input" type="text" name="username" placeholder="username" required />
+        <input class="signup-input" type="password" name="password" placeholder="Password" required />
+        <button type="submit" class="btn-primary signup-submit">Create Account →</button>
+      </div>
+    </form>
+    <div id="signup-result"></div>
+    <div class="auth-footer">
+      <span class="auth-footer-text">Already have an account?</span>
+      <button class="btn-link"
+              hx-get="/signin"
+              hx-target="#app"
+              hx-swap="innerHTML"
+              hx-push-url="/signin">
+        Sign In →
+      </button>
+    </div>
+  </div>
+</section>
+
+<style>
+.acct-type-picker {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.acct-type-card {
+  flex: 1;
+  padding: 12px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.acct-type-card:hover {
+  border-color: var(--border2);
+}
+
+.acct-type-card--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg2));
+}
+
+.acct-type-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.acct-type-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+</style>
+
+<script>
+function selectAcctType(type) {
+  document.getElementById('acct-type-input').value = type;
+  document.querySelectorAll('.acct-type-card').forEach(card => {
+    card.classList.toggle('acct-type-card--active', card.dataset.type === type);
+  });
+}
+</script>
+
+</div>

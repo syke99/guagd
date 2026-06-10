@@ -56,7 +56,7 @@ func (g *GarageClient) getUserByUsername(ctx context.Context, username string) (
 	var user GarageUser
 	err := g.db.QueryRow(
 		ctx,
-		"SELECT supertokens_id, username FROM users WHERE username = $1",
+		"SELECT supertokens_id, username FROM accounts WHERE username = $1",
 		func(rows pgx.Rows) error {
 			if !rows.Next() {
 				return pgx.ErrNoRows

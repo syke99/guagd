@@ -30,8 +30,16 @@ logs:
 
 migrate:
 	@export PATH="/opt/homebrew/opt/libpq/bin:$$PATH"; \
+	psql "$(MIGRATION_URL)" -c "CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now());" > /dev/null; \
 	for f in migrations/*.sql; do \
-		echo "running $$f..."; \
-		psql "$(MIGRATION_URL)" -f "$$f" || exit 1; \
+		name=$$(basename $$f); \
+		already=$$(psql "$(MIGRATION_URL)" -tAc "SELECT COUNT(*) FROM schema_migrations WHERE filename = '$$name'"); \
+		if [ "$$already" = "0" ]; then \
+			echo "running $$f..."; \
+			psql "$(MIGRATION_URL)" -f "$$f" || exit 1; \
+			psql "$(MIGRATION_URL)" -c "INSERT INTO schema_migrations (filename) VALUES ('$$name');" > /dev/null; \
+		else \
+			echo "skipping $$f (already applied)"; \
+		fi; \
 	done
 	@echo "migrations complete"

@@ -52,7 +52,12 @@ func (u *userClient) signUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("signUp: email=%s username=%s", payload.Email, payload.Username)
+	if payload.AcctType != "driver" && payload.AcctType != "club" {
+		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
+		return
+	}
+
+	log.Printf("signUp: email=%s username=%s acct_type=%s", payload.Email, payload.Username, payload.AcctType)
 
 	result, err := emailpassword.SignUp("public", payload.Email, payload.Password)
 	if err != nil || result.EmailAlreadyExistsError != nil {
@@ -60,19 +65,26 @@ func (u *userClient) signUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.createAccount(r.Context(), result.OK.User.ID, payload.Username, payload.Email); err != nil {
+	if err := u.createAccount(r.Context(), result.OK.User.ID, payload.Username, payload.Email, payload.AcctType); err != nil {
 		log.Printf("signUp: db insert: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
 		return
 	}
 
-	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, nil, nil); err != nil {
+	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, map[string]interface{}{
+		"username":  payload.Username,
+		"acct_type": payload.AcctType,
+	}, nil); err != nil {
 		log.Printf("signUp: create session: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
 		return
 	}
 
-	w.Header().Set("HX-Redirect", "/garage/@"+payload.Username)
+	dest := "/garage/@" + payload.Username
+	if payload.AcctType == "club" {
+		dest = "/hq/@" + payload.Username
+	}
+	w.Header().Set("HX-Redirect", dest)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -92,13 +104,27 @@ func (u *userClient) signIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, nil, nil); err != nil {
+	info, err := u.getAccountBySupertokensID(r.Context(), result.OK.User.ID)
+	if err != nil {
+		log.Printf("signIn: get account: %s", err)
+		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
+		return
+	}
+
+	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, map[string]interface{}{
+		"username":  info.Username,
+		"acct_type": info.AcctType,
+	}, nil); err != nil {
 		log.Printf("signIn: create session: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
 		return
 	}
 
-	w.Header().Set("HX-Redirect", "/garage")
+	dest := "/garage/@" + info.Username
+	if info.AcctType == "club" {
+		dest = "/hq/@" + info.Username
+	}
+	w.Header().Set("HX-Redirect", dest)
 	w.WriteHeader(http.StatusOK)
 }
 

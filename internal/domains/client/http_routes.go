@@ -22,7 +22,7 @@ func prefixRoute(prefix, route string) string {
 }
 
 func (c *client) Handlers() map[string]http.HandlerFunc {
-	sub, err := fs.Sub(landing, "landing")
+	sub, err := fs.Sub(landing, "pages/landing")
 	if err != nil {
 		log.Printf("error loading landing fs: %s", err)
 		return map[string]http.HandlerFunc{}
@@ -43,7 +43,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 	fileServer := http.FileServer(http.FS(sub))
 	assetsServer := http.FileServer(http.FS(assetsSub))
 	appServer := http.FileServer(http.FS(appSub))
-	landingRoute := prefixRoute(c.baseRoute, "landing/")
+	landingRoute := prefixRoute(c.baseRoute, "pages/landing/")
 	assetsRoute := prefixRoute(c.baseRoute, "assets/")
 	appRoute := prefixRoute(c.baseRoute, "app/")
 
@@ -87,31 +87,31 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 }
 
 func (c *client) waitlist(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/waitlist/signup.html")
+	http.ServeFileFS(w, r, landing, "pages/landing/waitlist/signup.html")
 }
 
 func (c *client) waitlistSuccess(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/waitlist/success.html")
+	http.ServeFileFS(w, r, landing, "pages/landing/waitlist/success.html")
 }
 
 func (c *client) waitlistFailure(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/waitlist/failure.html")
+	http.ServeFileFS(w, r, landing, "pages/landing/waitlist/failure.html")
 }
 
 func (c *client) signupPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/signup/signup.html")
+	http.ServeFileFS(w, r, landing, "pages/landing/signup/signup.html")
 }
 
 func (c *client) signupFailure(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/signup/failure.html")
+	http.ServeFileFS(w, r, landing, "pages/landing/signup/failure.html")
 }
 
 func (c *client) signinPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/signin/signin.html")
+	http.ServeFileFS(w, r, landing, "pages/landing/signin/signin.html")
 }
 
 func (c *client) signinFailure(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/signin/failure.html")
+	http.ServeFileFS(w, r, landing, "pages/landing/signin/failure.html")
 }
 
 func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +150,7 @@ func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {
 		userID := sessionContainer.GetUserID()
 		if err := c.db.Exec(
 			r.Context(),
-			`UPDATE users SET visitor_id = $1
+			`UPDATE accounts SET visitor_id = $1
 			 WHERE supertokens_id = $2
 			 AND COALESCE(visitor_id, '') != $1`,
 			cookie.Value,
