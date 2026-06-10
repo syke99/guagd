@@ -68,8 +68,8 @@ func TestAddWaitlist(t *testing.T) {
 		}
 
 		loc := w.Header().Get("HX-Location")
-		if !strings.Contains(loc, "/signup/success") {
-			t.Errorf("expected HX-Location to point to /signup/success, got: %s", loc)
+		if !strings.Contains(loc, "/waitlist/success") {
+			t.Errorf("expected HX-Location to point to /waitlist/success, got: %s", loc)
 		}
 	})
 
@@ -82,8 +82,8 @@ func TestAddWaitlist(t *testing.T) {
 		c.addWaitlist(w, r)
 
 		loc := w.Header().Get("HX-Location")
-		if !strings.Contains(loc, "/signup/failure") {
-			t.Errorf("expected HX-Location to point to /signup/failure, got: %s", loc)
+		if !strings.Contains(loc, "/waitlist/failure") {
+			t.Errorf("expected HX-Location to point to /waitlist/failure, got: %s", loc)
 		}
 	})
 
@@ -95,8 +95,8 @@ func TestAddWaitlist(t *testing.T) {
 		c.addWaitlist(w, r)
 
 		loc := w.Header().Get("HX-Location")
-		if !strings.Contains(loc, "/signup/failure") {
-			t.Errorf("expected HX-Location to point to /signup/failure, got: %s", loc)
+		if !strings.Contains(loc, "/waitlist/failure") {
+			t.Errorf("expected HX-Location to point to /waitlist/failure, got: %s", loc)
 		}
 	})
 }
@@ -104,7 +104,7 @@ func TestAddWaitlist(t *testing.T) {
 func TestRedirect(t *testing.T) {
 	t.Run("sets HX-Location header as JSON", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		resp := models.HTMXRedirectResponse{Path: "/signup/success", Target: "#hero-right"}
+		resp := models.HTMXRedirectResponse{Path: "/waitlist/success", Target: "#hero-right"}
 
 		redirect(w, resp)
 

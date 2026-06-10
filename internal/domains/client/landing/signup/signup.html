@@ -1,26 +1,50 @@
-<div class="panel-card signup-panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">Request Early Access</div>
-      <div class="panel-sub">Be first when Gaugd launches.</div>
+<div>
+
+<nav>
+  <div class="nav-brand">
+    <img src="/assets/logo.png" alt="Gaugd" class="nav-logo">
+    <div class="logo">GAUG<span>D</span></div>
+  </div>
+  <div class="nav-right">
+    <a href="#"
+       hx-get="/landing/landing.html"
+       hx-target="#app"
+       hx-swap="innerHTML"
+       hx-push-url="/">Home</a>
+  </div>
+</nav>
+
+<section class="auth-page">
+  <div class="panel-card auth-card">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Create your account</div>
+        <div class="panel-sub">Start building your verified history.</div>
+      </div>
+    </div>
+    <form hx-post="/api/v1/users/signup"
+          hx-ext="json-enc"
+          hx-target="#signup-result"
+          hx-swap="innerHTML">
+      <div class="signup-fields">
+        <input class="signup-input" type="email" name="email" placeholder="your@email.com" required />
+        <input class="signup-input" type="text" name="username" placeholder="username" required />
+        <input class="signup-input" type="password" name="password" placeholder="Password" required />
+        <button type="submit" class="btn-primary signup-submit">Create Account →</button>
+      </div>
+    </form>
+    <div id="signup-result"></div>
+    <div class="auth-footer">
+      <span class="auth-footer-text">Already have an account?</span>
+      <button class="btn-link"
+              hx-get="/signin"
+              hx-target="#app"
+              hx-swap="innerHTML"
+              hx-push-url="/signin">
+        Sign In →
+      </button>
     </div>
   </div>
-  <form id="signup-form"
-        hx-post="/api/v1/users/waitlist/add"
-        hx-ext="json-enc"
-        hx-target="#hero-right"
-        hx-swap="innerHTML">
-    <div class="signup-fields">
-      <input class="signup-input" type="text" name="name" placeholder="Your name" required />
-      <input class="signup-input" type="email" name="email" placeholder="your@email.com" required />
-      <input type="hidden" name="visitor_id" id="visitor-id-field" />
-      <button type="submit" class="btn-primary signup-submit">Request Early Access →</button>
-    </div>
-  </form>
-  <script>
-    (function() {
-      var match = document.cookie.match(/(?:^|;\s*)visitor_id=([^;]+)/);
-      if (match) document.getElementById('visitor-id-field').value = decodeURIComponent(match[1]);
-    })();
-  </script>
+</section>
+
 </div>

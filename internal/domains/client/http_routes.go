@@ -65,21 +65,31 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		assetsRoute: func(w http.ResponseWriter, r *http.Request) {
 			http.StripPrefix(assetsRoute, assetsServer).ServeHTTP(w, r)
 		},
-		prefixRoute(c.baseRoute, "signup"):         c.signup,
-		prefixRoute(c.baseRoute, "signup/success"): c.signupSuccess,
+		prefixRoute(c.baseRoute, "waitlist"):         c.waitlist,
+		prefixRoute(c.baseRoute, "waitlist/success"): c.waitlistSuccess,
+		prefixRoute(c.baseRoute, "waitlist/failure"): c.waitlistFailure,
+		prefixRoute(c.baseRoute, "signup"):         c.signupPage,
 		prefixRoute(c.baseRoute, "signup/failure"): c.signupFailure,
-		prefixRoute(c.baseRoute, "signin"):          c.signinPage,
-		prefixRoute(c.baseRoute, "signin/failure"):  c.signinFailure,
-		prefixRoute(c.baseRoute, "track/visit"):     c.trackVisit,
+		prefixRoute(c.baseRoute, "signin"):         c.signinPage,
+		prefixRoute(c.baseRoute, "signin/failure"): c.signinFailure,
+		prefixRoute(c.baseRoute, "track/visit"):    c.trackVisit,
 	}
 }
 
-func (c *client) signup(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/signup/signup.html")
+func (c *client) waitlist(w http.ResponseWriter, r *http.Request) {
+	http.ServeFileFS(w, r, landing, "landing/waitlist/signup.html")
 }
 
-func (c *client) signupSuccess(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "landing/signup/success.html")
+func (c *client) waitlistSuccess(w http.ResponseWriter, r *http.Request) {
+	http.ServeFileFS(w, r, landing, "landing/waitlist/success.html")
+}
+
+func (c *client) waitlistFailure(w http.ResponseWriter, r *http.Request) {
+	http.ServeFileFS(w, r, landing, "landing/waitlist/failure.html")
+}
+
+func (c *client) signupPage(w http.ResponseWriter, r *http.Request) {
+	http.ServeFileFS(w, r, landing, "landing/signup/signup.html")
 }
 
 func (c *client) signupFailure(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +131,16 @@ func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		log.Printf("track visit: %s", err)
 	}
+
+	// TODO: after we get supertokens all set up, we're going
+	// TODO: to grab the user id from the request context here;
+	// TODO: we're then going to do one of three things:
+	// TODO: 1. if the user does not have a visitor id set, we'll
+	// TODO:	insert it into that user's visitor_id column
+	// TODO: 2. if the user has a visitor id, but it's not the same
+	// TODO:	as the current one, we update the user's visitor id
+	// TODO: 3. if the user has a visitor id and it is the same,
+	// TODO:	as the current one, nothing happens
 
 	w.WriteHeader(http.StatusNoContent)
 }

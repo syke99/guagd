@@ -1,8 +1,9 @@
 CONFIG        ?= environment.json
 ST_DB_URL     ?= $(shell jq -r '.SUPERTOKENS_DB_URL' $(CONFIG))
+MIGRATION_URL ?= $(shell jq -r '.MIGRATION_URL' $(CONFIG))
 ST_CONTAINER   = guagd-supertokens
 
-.PHONY: dev app supertokens stop logs
+.PHONY: dev app supertokens stop logs migrate
 
 dev: supertokens app
 
@@ -26,3 +27,11 @@ stop:
 
 logs:
 	docker logs -f $(ST_CONTAINER)
+
+migrate:
+	@export PATH="/opt/homebrew/opt/libpq/bin:$$PATH"; \
+	for f in migrations/*.sql; do \
+		echo "running $$f..."; \
+		psql "$(MIGRATION_URL)" -f "$$f" || exit 1; \
+	done
+	@echo "migrations complete"
