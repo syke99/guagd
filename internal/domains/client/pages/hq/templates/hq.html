@@ -153,7 +153,23 @@ function addMemberDirect(username) {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({username}),
-  }).then(r => { if (r.ok) window.location.reload(); });
+  }).then(r => {
+    if (!r.ok) return;
+    toggleAddMember();
+    const grid = document.querySelector('.member-grid');
+    const empty = grid && grid.querySelector('.hq-empty-state');
+    if (empty) empty.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'member-card-wrap';
+    wrap.innerHTML =
+      `<a class="member-card" href="/garage/@${username}">` +
+        `<div class="member-card-thumb"><div class="member-card-avatar">👤</div></div>` +
+        `<div class="member-card-info"><div class="member-card-username">@${username}</div></div>` +
+      `</a>` +
+      `<button class="member-remove-btn" onclick="removeMember('${username}',this)">✕</button>`;
+    grid && grid.appendChild(wrap);
+    adjustMemberCount(1);
+  });
 }
 
 function handleMemberSearchKey(e) {
@@ -241,12 +257,30 @@ function saveStyle() {
   });
 }
 
-function removeMember(username) {
+function removeMember(username, btn) {
   fetch('/api/v1/hq/members/remove', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({username}),
-  }).then(() => { window.location.reload(); });
+  }).then(r => {
+    if (!r.ok) return;
+    const wrap = btn && btn.closest('.member-card-wrap');
+    if (wrap) wrap.remove();
+    adjustMemberCount(-1);
+    const grid = document.querySelector('.member-grid');
+    if (grid && !grid.querySelector('.member-card-wrap')) {
+      grid.innerHTML = '<div class="hq-empty-state">No members yet.</div>';
+    }
+  });
+}
+
+function adjustMemberCount(delta) {
+  const sub = document.querySelector('.panel-sub');
+  if (!sub) return;
+  const m = sub.textContent.match(/(\d+)\s+member/);
+  if (!m) return;
+  const n = parseInt(m[1]) + delta;
+  sub.textContent = sub.textContent.replace(/\d+\s+members?/, n + ' member' + (n !== 1 ? 's' : ''));
 }
 {{end}}
 </script>
@@ -314,7 +348,7 @@ function removeMember(username) {
         </div>
       </a>
       {{if $.IsOwner}}
-      <button class="member-remove-btn" onclick="removeMember('{{.Username}}')">✕</button>
+      <button class="member-remove-btn" onclick="removeMember('{{.Username}}',this)">✕</button>
       {{end}}
     </div>
     {{else}}
