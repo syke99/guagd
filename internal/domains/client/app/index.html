@@ -10,12 +10,27 @@
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
 <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@v0.16.0/bundle/website.test.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@v0.16.0/bundle/supertokens.test.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@v0.16.0/bundle/session.test.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@v0.16.0/bundle/emailpassword.test.js"></script>
 </head>
 <body>
-<div id="app" hx-get="/pages/landing/landing.html" hx-trigger="load" hx-swap="innerHTML" hx-push-url="/landing/"></div>
+<div id="app"></div>
+<script>
+(function() {
+  var routes = {
+    '/signin':           '/pages/landing/signin/signin.html',
+    '/signin/failure':   '/pages/landing/signin/failure.html',
+    '/signup':           '/pages/landing/signup/signup.html',
+    '/signup/failure':   '/pages/landing/signup/failure.html',
+    '/waitlist':         '/pages/landing/waitlist/signup.html',
+    '/waitlist/success': '/pages/landing/waitlist/success.html',
+    '/waitlist/failure': '/pages/landing/waitlist/failure.html',
+  };
+  var app = document.getElementById('app');
+  var frag = routes[location.pathname] || '/pages/landing/landing.html';
+  app.setAttribute('hx-get', frag);
+  app.setAttribute('hx-trigger', 'load');
+  app.setAttribute('hx-swap', 'innerHTML');
+  htmx.process(app);
+})();
+</script>
 </body>
 </html>

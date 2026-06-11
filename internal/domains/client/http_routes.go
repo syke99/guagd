@@ -88,32 +88,42 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 	return routes
 }
 
+// serveFragment serves an HTML fragment for HTMX swaps, or the full app shell
+// for direct navigation (refresh, typed URL). HTMX always sends HX-Request: true.
+func (c *client) serveFragment(w http.ResponseWriter, r *http.Request, path string) {
+	if r.Header.Get("HX-Request") == "true" {
+		http.ServeFileFS(w, r, landing, path)
+		return
+	}
+	http.ServeFileFS(w, r, app, "app/index.html")
+}
+
 func (c *client) waitlist(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "pages/landing/waitlist/signup.html")
+	c.serveFragment(w, r, "pages/landing/waitlist/signup.html")
 }
 
 func (c *client) waitlistSuccess(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "pages/landing/waitlist/success.html")
+	c.serveFragment(w, r, "pages/landing/waitlist/success.html")
 }
 
 func (c *client) waitlistFailure(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "pages/landing/waitlist/failure.html")
+	c.serveFragment(w, r, "pages/landing/waitlist/failure.html")
 }
 
 func (c *client) signupPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "pages/landing/signup/signup.html")
+	c.serveFragment(w, r, "pages/landing/signup/signup.html")
 }
 
 func (c *client) signupFailure(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "pages/landing/signup/failure.html")
+	c.serveFragment(w, r, "pages/landing/signup/failure.html")
 }
 
 func (c *client) signinPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "pages/landing/signin/signin.html")
+	c.serveFragment(w, r, "pages/landing/signin/signin.html")
 }
 
 func (c *client) signinFailure(w http.ResponseWriter, r *http.Request) {
-	http.ServeFileFS(w, r, landing, "pages/landing/signin/failure.html")
+	c.serveFragment(w, r, "pages/landing/signin/failure.html")
 }
 
 func (c *client) accessPage(w http.ResponseWriter, r *http.Request) {
