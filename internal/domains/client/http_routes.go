@@ -79,7 +79,13 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		prefixRoute(c.baseRoute, "signin/failure"):   c.signinFailure,
 		prefixRoute(c.baseRoute, "track/visit"):   c.trackVisit,
 		prefixRoute(c.baseRoute, "access"):        c.accessPage,
-		"/garage/{username}":                       c.garage.GaragePage,
+		"/garage/{username}": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("HX-Request") != "true" {
+				http.ServeFileFS(w, r, app, "app/index.html")
+				return
+			}
+			c.garage.GaragePage(w, r)
+		},
 		"/api/v1/garage/layout":                    middleware.RequireAuth(c.garage.SaveLayout),
 		"/api/v1/garage/theme":                     middleware.RequireAuth(c.garage.SaveTheme),
 		"/hq/{username}":                           c.hq.HQPage,

@@ -30,7 +30,8 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 		SessionRequired: &sessionRequired,
 	})
 
-	isOwner := sessionContainer != nil && sessionContainer.GetUserID() == user.SupertokensID
+	isAuthenticated := sessionContainer != nil
+	isOwner := isAuthenticated && sessionContainer.GetUserID() == user.SupertokensID
 
 	layout, theme, err := g.getGarageLayout(r.Context(), user.SupertokensID)
 	if err != nil {
@@ -40,10 +41,11 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := GaragePageData{
-		Username: user.Username,
-		IsOwner:  isOwner,
-		Layout:   layout,
-		SafeCSS:  buildThemeCSS(theme),
+		Username:        user.Username,
+		IsOwner:         isOwner,
+		IsAuthenticated: isAuthenticated,
+		Layout:          layout,
+		SafeCSS:         buildThemeCSS(theme),
 	}
 
 	w.Header().Set("Content-Type", "text/html")

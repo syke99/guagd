@@ -73,6 +73,10 @@ nav a {
   transition: color 0.2s;
 }
 nav a:hover { color: var(--text); }
+nav a.btn-nav { color: var(--text); }
+nav a.btn-nav:hover { color: var(--accent); }
+nav a.nav-brand { color: inherit; }
+nav a.nav-brand:hover { color: inherit; }
 
 .btn-nav {
   background: transparent;
@@ -845,6 +849,221 @@ footer span { font-size: 13px; color: var(--muted); }
   transition: color 0.2s;
 }
 .btn-link:hover { color: var(--accent2); }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 32px 28px 28px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.modal-message {
+  font-size: 14px;
+  color: var(--muted2);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* GARAGE PAGE */
+.garage-wrap {
+  padding: 24px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.edit-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 56px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 8px 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 99;
+}
+
+#btn-edit.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.edit-dropdown-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted2);
+  cursor: pointer;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.edit-dropdown-btn:hover {
+  border-color: var(--border2);
+  color: var(--text);
+}
+.edit-dropdown-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(232, 93, 4, 0.08);
+}
+
+.grid-stack { background: transparent; }
+
+.grid-stack-item-content {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.gs-handle {
+  cursor: grab;
+  position: absolute;
+  top: 8px;
+  right: 40px;
+  color: var(--muted);
+  font-size: 16px;
+  z-index: 10;
+  display: none;
+}
+.edit-layout-active .gs-handle { display: block; }
+
+.edit-component-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted2);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 12px;
+  display: none;
+}
+.edit-style-active .edit-component-btn { display: block; }
+.edit-component-btn:hover { color: var(--text); border-color: var(--border2); }
+
+.theme-editor {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100vh;
+  background: var(--bg3);
+  border-left: 1px solid var(--border);
+  padding: 24px 20px;
+  overflow-y: auto;
+  z-index: 300;
+  display: none;
+}
+.theme-editor-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.theme-section { margin-bottom: 24px; }
+.theme-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+.theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.theme-row label { font-size: 13px; color: var(--muted2); }
+.theme-row input[type="color"] {
+  width: 36px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+}
+.component-style-editor { margin-bottom: 12px; }
+.component-style-editor summary {
+  font-size: 13px;
+  color: var(--muted2);
+  cursor: pointer;
+  padding: 6px 0;
+  text-transform: capitalize;
+}
+.component-style-editor summary:hover { color: var(--text); }
+.component-css-input {
+  width: 100%;
+  min-height: 80px;
+  margin-top: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 12px;
+  padding: 8px;
+  resize: vertical;
+}
+
+.garage-empty-state {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 20px;
+  text-align: center;
+}
+.garage-profile {
+  padding: 20px;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.garage-car-grid { padding: 12px; }
 
 /* RESPONSIVE */
 

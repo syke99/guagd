@@ -7,9 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css"/>
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
 <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -25,7 +27,13 @@
     '/waitlist/failure': '/pages/landing/waitlist/failure.html',
   };
   var app = document.getElementById('app');
-  var frag = routes[location.pathname] || '/pages/landing/landing.html';
+  var path = location.pathname;
+  var frag;
+  if (path.startsWith('/garage/')) {
+    frag = path;
+  } else {
+    frag = routes[path] || '/pages/landing/landing.html';
+  }
   app.setAttribute('hx-get', frag);
   app.setAttribute('hx-trigger', 'load');
   app.setAttribute('hx-swap', 'innerHTML');

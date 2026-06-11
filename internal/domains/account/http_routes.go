@@ -8,6 +8,7 @@ import (
 
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 
 	"guagd/internal/pkg/models"
 )
@@ -21,6 +22,7 @@ func (u *accountClient) Handlers() map[string]http.HandlerFunc {
 		prefixRoute(u.baseRoute, "waitlist/add"): u.addWaitlist,
 		prefixRoute(u.baseRoute, "signup"):       u.signUp,
 		prefixRoute(u.baseRoute, "signin"):       u.signIn,
+		prefixRoute(u.baseRoute, "signout"):      u.signOut,
 	}
 
 	return routes
@@ -125,6 +127,22 @@ func (u *accountClient) signIn(w http.ResponseWriter, r *http.Request) {
 		dest = "/hq/@" + info.Username
 	}
 	w.Header().Set("HX-Redirect", dest)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (u *accountClient) signOut(w http.ResponseWriter, r *http.Request) {
+	sessionRequired := false
+	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
+		SessionRequired: &sessionRequired,
+	})
+	if err == nil && sessionContainer != nil {
+		if err := sessionContainer.RevokeSession(); err != nil {
+			log.Printf("signOut: revoke session: %s", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
 }
 

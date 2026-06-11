@@ -1,203 +1,18 @@
 {{define "garage.html"}}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>@{{.Username}}'s Garage — Gaugd</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app/style.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css"/>
-<link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
-<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
 <style>{{.SafeCSS}}</style>
-<style>
-.garage-wrap {
-  padding: 24px 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* Edit dropdown — hangs off the navbar */
-.edit-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 56px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 8px 8px;
-  padding: 8px 10px;
-  display: flex;
-  gap: 6px;
-  z-index: 99;
-}
-
-#btn-edit.active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.edit-dropdown-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--muted2);
-  cursor: pointer;
-  padding: 5px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: inherit;
-  letter-spacing: 0.4px;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-.edit-dropdown-btn:hover {
-  border-color: var(--border2);
-  color: var(--text);
-}
-.edit-dropdown-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(232, 93, 4, 0.08);
-}
-
-.grid-stack { background: transparent; }
-
-.grid-stack-item-content {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  height: 100%;
-}
-
-.gs-handle {
-  cursor: grab;
-  position: absolute;
-  top: 8px;
-  right: 40px;
-  color: var(--muted);
-  font-size: 16px;
-  z-index: 10;
-  display: none;
-}
-.edit-layout-active .gs-handle { display: block; }
-
-.edit-component-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--muted2);
-  cursor: pointer;
-  padding: 2px 6px;
-  font-size: 12px;
-  display: none;
-}
-.edit-style-active .edit-component-btn { display: block; }
-.edit-component-btn:hover { color: var(--text); border-color: var(--border2); }
-
-.theme-editor {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 300px;
-  height: 100vh;
-  background: var(--bg3);
-  border-left: 1px solid var(--border);
-  padding: 24px 20px;
-  overflow-y: auto;
-  z-index: 300;
-  display: none;
-}
-.theme-editor-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.theme-section { margin-bottom: 24px; }
-.theme-section-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 12px;
-}
-.theme-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.theme-row label { font-size: 13px; color: var(--muted2); }
-.theme-row input[type="color"] {
-  width: 36px;
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: none;
-  cursor: pointer;
-  padding: 2px;
-}
-.component-style-editor { margin-bottom: 12px; }
-.component-style-editor summary {
-  font-size: 13px;
-  color: var(--muted2);
-  cursor: pointer;
-  padding: 6px 0;
-  text-transform: capitalize;
-}
-.component-style-editor summary:hover { color: var(--text); }
-.component-css-input {
-  width: 100%;
-  min-height: 80px;
-  margin-top: 8px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: 'Menlo', 'Monaco', monospace;
-  font-size: 12px;
-  padding: 8px;
-  resize: vertical;
-}
-
-.garage-empty-state {
-  color: var(--muted);
-  font-size: 14px;
-  padding: 20px;
-  text-align: center;
-}
-.garage-profile {
-  padding: 20px;
-  height: 100%;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.garage-car-grid { padding: 12px; }
-</style>
-</head>
-<body>
 
 <nav>
-  <div class="nav-brand">
+  <a href="/" class="nav-brand">
     <img src="/assets/logo.png" alt="Gaugd" class="nav-logo">
     <div class="logo">GAUG<span>D</span></div>
-  </div>
+  </a>
   <div class="nav-right">
     {{if .IsOwner}}
     <button id="btn-edit" class="btn-nav" onclick="toggleEdit()">Edit</button>
+    {{end}}
+    <a href="/" class="btn-nav">Home</a>
+    {{if .IsAuthenticated}}
+    <button class="btn-nav" onclick="showLogoutConfirm()">Log Out</button>
     {{end}}
   </div>
   {{if .IsOwner}}
@@ -223,6 +38,19 @@
     {{end}}
   </div>
 </div>
+
+{{if .IsAuthenticated}}
+<div id="logout-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeLogoutModal()">
+  <div class="modal-box">
+    <div class="modal-title">Log Out</div>
+    <p class="modal-message">Are you sure you want to log out?</p>
+    <div class="modal-actions">
+      <button class="btn-nav" onclick="closeLogoutModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmLogout()">Yes, Log Out</button>
+    </div>
+  </div>
+</div>
+{{end}}
 
 {{if .IsOwner}}
 <div id="theme-editor" class="theme-editor">
@@ -257,7 +85,6 @@ border-radius: 16px;"></textarea>
 </div>
 {{end}}
 
-<script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <script>
 const grid = GridStack.init({
   column: 12,
@@ -284,7 +111,6 @@ function toggleEdit() {
 }
 
 function setEditMode(mode) {
-  // toggle off if already active, otherwise switch
   applyMode(editMode === mode ? null : mode);
 }
 
@@ -322,7 +148,6 @@ grid.on('change', function() {
 document.querySelectorAll('.edit-component-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     const component = this.dataset.component;
-    // make sure style mode is active
     if (editMode !== 'style') {
       const dropdown = document.getElementById('edit-dropdown');
       dropdown.style.display = 'flex';
@@ -384,10 +209,20 @@ function saveStyle() {
   });
 }
 {{end}}
-</script>
 
-</body>
-</html>
+{{if .IsAuthenticated}}
+function showLogoutConfirm() {
+  document.getElementById('logout-modal').style.display = 'flex';
+}
+function closeLogoutModal() {
+  document.getElementById('logout-modal').style.display = 'none';
+}
+function confirmLogout() {
+  fetch('/api/v1/accounts/signout', { method: 'POST' })
+    .then(() => { window.location.href = '/'; });
+}
+{{end}}
+</script>
 {{end}}
 
 {{define "profile-header"}}

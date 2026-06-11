@@ -41,10 +41,11 @@ type LayoutItem struct {
 }
 
 type GaragePageData struct {
-	Username string
-	IsOwner  bool
-	Layout   []LayoutItem
-	SafeCSS  template.CSS
+	Username        string
+	IsOwner         bool
+	IsAuthenticated bool
+	Layout          []LayoutItem
+	SafeCSS         template.CSS
 }
 
 var defaultLayout = []LayoutItem{
