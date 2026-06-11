@@ -35,7 +35,7 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	isAuthenticated := sessionContainer != nil
 	isOwner := isAuthenticated && sessionContainer.GetUserID() == user.SupertokensID
 
-	layout, theme, err := g.getGarageLayout(r.Context(), user.SupertokensID)
+	layout, theme, coverPhotoURL, err := g.getGarageLayout(r.Context(), user.SupertokensID)
 	if err != nil {
 		log.Printf("garagePage: get layout: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -56,6 +56,7 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 		Cars:            cars,
 		Layout:          layout,
 		SafeCSS:         buildThemeCSS(theme),
+		CoverPhotoURL:   coverPhotoURL,
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -149,6 +150,89 @@ func (g *GarageClient) RemoveCar(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
 	if err := g.removeCar(r.Context(), userID, body.ID); err != nil {
 		log.Printf("removeCar: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (g *GarageClient) AddCarPhoto(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	if carID == "" {
+		http.Error(w, "car_id required", http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		ObjectKey string `json:"object_key"`
+		IsPrimary bool   `json:"is_primary"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.ObjectKey) == "" {
+		http.Error(w, "object_key required", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
+	photo, err := g.addCarPhoto(r.Context(), userID, carID, body.ObjectKey, body.IsPrimary)
+	if err != nil {
+		log.Printf("addCarPhoto: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	photo.URL = g.storage.CarPhotoURL(photo.ObjectKey)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(photo)
+}
+
+func (g *GarageClient) RemoveCarPhoto(w http.ResponseWriter, r *http.Request) {
+	photoID := r.URL.Query().Get("photo_id")
+	if photoID == "" {
+		http.Error(w, "photo_id required", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
+	if err := g.removeCarPhoto(r.Context(), userID, photoID); err != nil {
+		log.Printf("removeCarPhoto: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (g *GarageClient) SetCarPhotoPrimary(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	photoID := r.URL.Query().Get("photo_id")
+	if carID == "" || photoID == "" {
+		http.Error(w, "car_id and photo_id required", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
+	if err := g.setCarPhotoPrimary(r.Context(), userID, carID, photoID); err != nil {
+		log.Printf("setCarPhotoPrimary: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (g *GarageClient) SaveCoverPhoto(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ObjectKey string `json:"object_key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.ObjectKey) == "" {
+		http.Error(w, "object_key required", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
+	if err := g.saveCoverPhoto(r.Context(), userID, body.ObjectKey); err != nil {
+		log.Printf("saveCoverPhoto: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}

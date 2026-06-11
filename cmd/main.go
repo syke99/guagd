@@ -13,7 +13,9 @@ import (
 	"guagd/cmd/config"
 	"guagd/internal/domains/account"
 	"guagd/internal/domains/client"
+	"guagd/internal/domains/upload"
 	"guagd/internal/pkg/db"
+	"guagd/internal/pkg/storage"
 	"guagd/internal/server"
 )
 
@@ -44,6 +46,22 @@ func main() {
 				return err
 			}
 
+			store, err := storage.New(storage.Config{
+				AccountID:       cfg.R2AccountID,
+				AccessKeyID:     cfg.R2AccessKeyID,
+				SecretAccessKey: cfg.R2SecretAccessKey,
+				CarPhotos: storage.BucketConfig{
+					Name:      cfg.R2CarPhotosBucketName,
+					PublicURL: cfg.R2CarPhotosBucketPublicURL,
+				},
+				AccountPhotos: storage.BucketConfig{
+					Name:      cfg.R2AccountPhotosBucketName,
+					PublicURL: cfg.R2AccountPhotosBucketPublicURL,
+				},
+			})
+			if err != nil {
+				return err
+			}
 			mux := http.NewServeMux()
 
 			srv, err := server.NewServer(mux, cfg.ServerPort)
@@ -53,11 +71,13 @@ func main() {
 
 			auth.Init(cfg.SuperTokensCoreURL, cfg.PublicURL, cfg.SuperTokensAPIKey)
 
-			clientDomain := client.NewClient("/", cfg.PublicURL, database)
+			clientDomain := client.NewClient("/", cfg.PublicURL, database, store)
 			accountClient := account.NewAccountClient("/api/v1/accounts/", database)
+			uploadClient := upload.NewUploadClient(store)
 
 			srv.RegisterRoutes(clientDomain)
 			srv.RegisterRoutes(accountClient)
+			srv.RegisterRoutes(uploadClient)
 			srv.Wrap(supertokens.Middleware)
 
 			return srv.Serve()

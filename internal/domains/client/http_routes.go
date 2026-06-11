@@ -86,10 +86,14 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 			}
 			c.garage.GaragePage(w, r)
 		},
-		"/api/v1/garage/layout":                    middleware.RequireAuth(c.garage.SaveLayout),
-		"/api/v1/garage/theme":                     middleware.RequireAuth(c.garage.SaveTheme),
-		"/api/v1/garage/cars/add":                  middleware.RequireAuth(c.garage.AddCar),
-		"/api/v1/garage/cars/remove":               middleware.RequireAuth(c.garage.RemoveCar),
+		"/api/v1/garage/layout":                                      middleware.RequireAuth(c.garage.SaveLayout),
+		"/api/v1/garage/theme":                                       middleware.RequireAuth(c.garage.SaveTheme),
+		"/api/v1/garage/cover":                                       middleware.RequireAuth(c.garage.SaveCoverPhoto),
+		"/api/v1/garage/cars/add":                                    middleware.RequireAuth(c.garage.AddCar),
+		"/api/v1/garage/cars/remove":                                 middleware.RequireAuth(c.garage.RemoveCar),
+		"/api/v1/garage/cars/photos/add":     middleware.RequireAuth(c.garage.AddCarPhoto),
+		"/api/v1/garage/cars/photos/remove":  middleware.RequireAuth(c.garage.RemoveCarPhoto),
+		"/api/v1/garage/cars/photos/primary": middleware.RequireAuth(c.garage.SetCarPhotoPrimary),
 		"/api/v1/hq/layout":                        middleware.RequireAuth(c.hq.SaveLayout),
 		"/api/v1/hq/theme":                         middleware.RequireAuth(c.hq.SaveTheme),
 		"/api/v1/hq/members":                       c.hq.ListMembers,

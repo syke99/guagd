@@ -8,6 +8,7 @@ import (
 	"guagd/internal/domains/client/pages/garage"
 	"guagd/internal/domains/client/pages/hq"
 	"guagd/internal/pkg/db"
+	"guagd/internal/pkg/storage"
 )
 
 //go:embed all:pages/landing
@@ -27,12 +28,12 @@ type client struct {
 	hq        *hq.HQClient
 }
 
-func NewClient(baseRoute string, publicURL string, db db.DB) *client {
+func NewClient(baseRoute string, publicURL string, db db.DB, store *storage.Client) *client {
 	return &client{
 		baseRoute: baseRoute,
 		publicURL: publicURL,
 		db:        db,
-		garage:    garage.NewGarageClient(db),
+		garage:    garage.NewGarageClient(db, store),
 		hq:        hq.NewHQClient(db),
 	}
 }

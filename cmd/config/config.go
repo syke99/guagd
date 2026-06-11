@@ -20,6 +20,14 @@ type Config struct {
 	// Auth
 	SuperTokensCoreURL string `json:"SUPERTOKENS_CORE_URL"  yaml:"SUPERTOKENS_CORE_URL"  env:"SUPERTOKENS_CORE_URL"`
 	SuperTokensAPIKey  string `json:"SUPERTOKENS_API_KEY" yaml:"SUPERTOKENS_API_KEY" env:"SUPERTOKENS_API_KEY"`
+	// Object Storage
+	R2AccountID                    string `json:"R2_ACCOUNT_ID"                     yaml:"R2_ACCOUNT_ID"                     env:"R2_ACCOUNT_ID"`
+	R2AccessKeyID                  string `json:"R2_ACCESS_KEY_ID"                  yaml:"R2_ACCESS_KEY_ID"                  env:"R2_ACCESS_KEY_ID"`
+	R2SecretAccessKey              string `json:"R2_SECRET_ACCESS_KEY"              yaml:"R2_SECRET_ACCESS_KEY"              env:"R2_SECRET_ACCESS_KEY"`
+	R2AccountPhotosBucketName      string `json:"R2_ACCOUNT_PHOTOS_BUCKET_NAME"     yaml:"R2_ACCOUNT_PHOTOS_BUCKET_NAME"     env:"R2_ACCOUNT_PHOTOS_BUCKET_NAME"`
+	R2CarPhotosBucketName          string `json:"R2_CAR_PHOTOS_BUCKET_NAME"         yaml:"R2_CAR_PHOTOS_BUCKET_NAME"         env:"R2_CAR_PHOTOS_BUCKET_NAME"`
+	R2AccountPhotosBucketPublicURL string `json:"R2_ACCOUNT_PHOTOS_BUCKET_PUBLIC_URL" yaml:"R2_ACCOUNT_PHOTOS_BUCKET_PUBLIC_URL" env:"R2_ACCOUNT_PHOTOS_BUCKET_PUBLIC_URL"`
+	R2CarPhotosBucketPublicURL     string `json:"R2_CAR_PHOTOS_BUCKET_PUBLIC_URL"   yaml:"R2_CAR_PHOTOS_BUCKET_PUBLIC_URL"   env:"R2_CAR_PHOTOS_BUCKET_PUBLIC_URL"`
 }
 
 type LoadOption func(*loadOptions)
