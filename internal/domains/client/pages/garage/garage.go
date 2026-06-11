@@ -44,10 +44,21 @@ type LayoutItem struct {
 	H         int    `json:"h"`
 }
 
+type Car struct {
+	ID      string `json:"id"`
+	Year    int    `json:"year"`
+	Make    string `json:"make"`
+	Model   string `json:"model"`
+	Trim    string `json:"trim"`
+	Mileage int    `json:"mileage"`
+}
+
 type GaragePageData struct {
 	Username        string
 	IsOwner         bool
 	IsAuthenticated bool
+	CarCount        int
+	Cars            []Car
 	Layout          []LayoutItem
 	SafeCSS         template.CSS
 }
@@ -133,6 +144,53 @@ func (g *GarageClient) upsertTheme(ctx context.Context, supertokensID string, th
 		 ON CONFLICT (supertokens_id) DO UPDATE
 		 SET theme = EXCLUDED.theme`,
 		supertokensID, string(b),
+	)
+}
+
+func (g *GarageClient) getCars(ctx context.Context, ownerID string) ([]Car, error) {
+	var cars []Car
+	err := g.db.Query(
+		ctx,
+		`SELECT id::text, year, make, model, COALESCE(trim, ''), COALESCE(mileage, 0)
+		 FROM cars WHERE owner_id = $1 ORDER BY created_at`,
+		func(rows pgx.Rows) error {
+			for rows.Next() {
+				var c Car
+				if err := rows.Scan(&c.ID, &c.Year, &c.Make, &c.Model, &c.Trim, &c.Mileage); err != nil {
+					return err
+				}
+				cars = append(cars, c)
+			}
+			return rows.Err()
+		},
+		ownerID,
+	)
+	return cars, err
+}
+
+func (g *GarageClient) addCar(ctx context.Context, ownerID string, car Car) (Car, error) {
+	var created Car
+	err := g.db.QueryRow(
+		ctx,
+		`INSERT INTO cars (owner_id, year, make, model, trim, mileage)
+		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, 0))
+		 RETURNING id::text, year, make, model, COALESCE(trim, ''), COALESCE(mileage, 0)`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return pgx.ErrNoRows
+			}
+			return rows.Scan(&created.ID, &created.Year, &created.Make, &created.Model, &created.Trim, &created.Mileage)
+		},
+		ownerID, car.Year, car.Make, car.Model, car.Trim, car.Mileage,
+	)
+	return created, err
+}
+
+func (g *GarageClient) removeCar(ctx context.Context, ownerID, carID string) error {
+	return g.db.Exec(
+		ctx,
+		`DELETE FROM cars WHERE id = $1 AND owner_id = $2`,
+		carID, ownerID,
 	)
 }
 

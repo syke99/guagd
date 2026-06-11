@@ -88,6 +88,8 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		},
 		"/api/v1/garage/layout":                    middleware.RequireAuth(c.garage.SaveLayout),
 		"/api/v1/garage/theme":                     middleware.RequireAuth(c.garage.SaveTheme),
+		"/api/v1/garage/cars/add":                  middleware.RequireAuth(c.garage.AddCar),
+		"/api/v1/garage/cars/remove":               middleware.RequireAuth(c.garage.RemoveCar),
 		"/api/v1/hq/layout":                        middleware.RequireAuth(c.hq.SaveLayout),
 		"/api/v1/hq/theme":                         middleware.RequireAuth(c.hq.SaveTheme),
 		"/api/v1/hq/members":                       c.hq.ListMembers,

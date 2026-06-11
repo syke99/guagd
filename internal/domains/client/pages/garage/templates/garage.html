@@ -93,6 +93,92 @@ function applyMode(mode) {
 
   const te = document.getElementById('theme-editor');
   te.style.display = mode === 'style' ? 'block' : 'none';
+
+  if (mode !== 'layout') {
+    const panel = document.getElementById('add-car-panel');
+    if (panel) panel.style.display = 'none';
+  }
+}
+
+function toggleAddCar() {
+  const panel = document.getElementById('add-car-panel');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (!open) {
+    setTimeout(() => document.getElementById('add-car-year')?.focus(), 50);
+  } else {
+    document.getElementById('add-car-form').reset();
+  }
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.add-car-tab-anchor')) {
+    const panel = document.getElementById('add-car-panel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
+function addCar() {
+  const year = parseInt(document.getElementById('add-car-year').value);
+  const make = document.getElementById('add-car-make').value.trim();
+  const model = document.getElementById('add-car-model').value.trim();
+  const trim = document.getElementById('add-car-trim').value.trim();
+  const mileageVal = document.getElementById('add-car-mileage').value.trim();
+  const mileage = mileageVal ? parseInt(mileageVal) : 0;
+
+  if (!year || !make || !model) return;
+
+  fetch('/api/v1/garage/cars/add', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({year, make, model, trim, mileage}),
+  }).then(r => r.ok ? r.json() : null).then(car => {
+    if (!car) return;
+    toggleAddCar();
+    const carGrid = document.querySelector('.car-grid');
+    const empty = carGrid && carGrid.querySelector('.garage-empty-state');
+    if (empty) empty.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'car-card-wrap';
+    const name = `${car.year} ${car.make} ${car.model}`;
+    const subParts = [car.trim, car.mileage ? car.mileage.toLocaleString() + ' mi' : ''].filter(Boolean);
+    const sub = subParts.length ? `<div class="car-card-sub">${subParts.join(' · ')}</div>` : '';
+    wrap.innerHTML =
+      `<div class="car-card">` +
+        `<div class="car-card-thumb"><div class="car-card-icon">🚗</div></div>` +
+        `<div class="car-card-info"><div class="car-card-name">${name}</div>${sub}</div>` +
+      `</div>` +
+      `<button class="car-remove-btn" onclick="removeCar('${car.id}',this)">✕</button>`;
+    carGrid && carGrid.appendChild(wrap);
+    adjustCarCount(1);
+  });
+}
+
+function removeCar(id, btn) {
+  fetch('/api/v1/garage/cars/remove', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id}),
+  }).then(r => {
+    if (!r.ok) return;
+    const wrap = btn && btn.closest('.car-card-wrap');
+    if (wrap) wrap.remove();
+    adjustCarCount(-1);
+    const carGrid = document.querySelector('.car-grid');
+    if (carGrid && !carGrid.querySelector('.car-card-wrap')) {
+      carGrid.innerHTML = '<div class="garage-empty-state">No vehicles added yet.</div>';
+    }
+  });
+}
+
+function adjustCarCount(delta) {
+  const sub = document.querySelector('.garage-profile-tab .panel-sub');
+  if (!sub) return;
+  const m = sub.textContent.match(/(\d+)\s+vehicle/);
+  if (!m) return;
+  const n = parseInt(m[1]) + delta;
+  sub.textContent = sub.textContent.replace(/\d+\s+vehicles?/, n + ' vehicle' + (n !== 1 ? 's' : ''));
 }
 
 grid.on('change', function() {
@@ -196,28 +282,53 @@ function saveStyle() {
 
 {{define "profile-header"}}
 <div class="garage-profile">
-  {{if .IsOwner}}
-  <button class="edit-component-btn" data-component="profile-header" title="Edit styles">✏</button>
-  {{end}}
-  <div class="panel-header">
-    <div class="panel-header-left">
-      <div class="panel-avatar">👤</div>
-      <div>
-        <div class="panel-title">@{{.Username}}'s Garage</div>
-        <div class="panel-sub">@{{.Username}}</div>
-      </div>
+  <div class="garage-profile-tab">
+    <div class="panel-avatar">👤</div>
+    <div>
+      <div class="panel-title">@{{.Username}}'s Garage</div>
+      <div class="panel-sub">@{{.Username}} · {{.CarCount}} {{if eq .CarCount 1}}vehicle{{else}}vehicles{{end}}</div>
     </div>
   </div>
 </div>
 {{end}}
 
 {{define "car-list"}}
-<div style="height:100%;position:relative;">
+<div class="car-grid-wrap">
   {{if .IsOwner}}
   <button class="edit-component-btn" data-component="car-list" title="Edit styles">✏</button>
+  <div class="add-car-tab-anchor">
+    <button class="add-car-btn" onclick="toggleAddCar()">+ Add Vehicle</button>
+    <div id="add-car-panel" class="add-car-panel" style="display:none">
+      <form id="add-car-form" onsubmit="event.preventDefault(); addCar()">
+        <input class="add-car-input" id="add-car-year" type="number" placeholder="Year" min="1900" max="2099" required>
+        <input class="add-car-input" id="add-car-make" type="text" placeholder="Make" required>
+        <input class="add-car-input" id="add-car-model" type="text" placeholder="Model" required>
+        <input class="add-car-input" id="add-car-trim" type="text" placeholder="Trim (optional)">
+        <input class="add-car-input" id="add-car-mileage" type="number" placeholder="Mileage (optional)" min="0">
+        <button type="submit" class="add-car-submit">Add Vehicle</button>
+      </form>
+    </div>
+  </div>
   {{end}}
-  <div class="panel-grid garage-car-grid">
+  <div class="car-grid">
+    {{range .Cars}}
+    <div class="car-card-wrap">
+      <div class="car-card">
+        <div class="car-card-thumb"><div class="car-card-icon">🚗</div></div>
+        <div class="car-card-info">
+          <div class="car-card-name">{{.Year}} {{.Make}} {{.Model}}</div>
+          {{if or .Trim .Mileage}}
+          <div class="car-card-sub">{{if .Trim}}{{.Trim}}{{end}}{{if and .Trim .Mileage}} · {{end}}{{if .Mileage}}{{.Mileage}} mi{{end}}</div>
+          {{end}}
+        </div>
+      </div>
+      {{if $.IsOwner}}
+      <button class="car-remove-btn" onclick="removeCar('{{.ID}}',this)">✕</button>
+      {{end}}
+    </div>
+    {{else}}
     <div class="garage-empty-state">No vehicles added yet.</div>
+    {{end}}
   </div>
 </div>
 {{end}}
