@@ -88,7 +88,19 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		},
 		"/api/v1/garage/layout":                    middleware.RequireAuth(c.garage.SaveLayout),
 		"/api/v1/garage/theme":                     middleware.RequireAuth(c.garage.SaveTheme),
-		"/hq/{username}":                           c.hq.HQPage,
+		"/api/v1/hq/layout":                        middleware.RequireAuth(c.hq.SaveLayout),
+		"/api/v1/hq/theme":                         middleware.RequireAuth(c.hq.SaveTheme),
+		"/api/v1/hq/members":                       c.hq.ListMembers,
+		"/api/v1/hq/members/add":                   c.hq.AddMember,
+		"/api/v1/hq/members/remove":                c.hq.RemoveMember,
+		"/api/v1/hq/members/search":                c.hq.SearchMembers,
+		"/hq/{username}": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("HX-Request") != "true" {
+				http.ServeFileFS(w, r, app, "app/index.html")
+				return
+			}
+			c.hq.HQPage(w, r)
+		},
 	}
 
 	return routes

@@ -11,13 +11,17 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"guagd/internal/domains/client/pages/shared"
 	"guagd/internal/pkg/db"
 )
 
 //go:embed templates/*
 var templates embed.FS
 
-var garageTemplate = template.Must(template.ParseFS(templates, "templates/garage.html"))
+var garageTemplate = template.Must(
+	template.Must(template.New("").Parse(shared.NavTemplate)).
+		ParseFS(templates, "templates/garage.html"),
+)
 
 type GarageClient struct {
 	db db.DB

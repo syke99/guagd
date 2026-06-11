@@ -18,6 +18,7 @@
 <script>
 (function() {
   var routes = {
+    '/landing':          '/pages/landing/landing.html',
     '/signin':           '/pages/landing/signin/signin.html',
     '/signin/failure':   '/pages/landing/signin/failure.html',
     '/signup':           '/pages/landing/signup/signup.html',
@@ -28,8 +29,12 @@
   };
   var app = document.getElementById('app');
   var path = location.pathname;
+  if (path === '/') {
+    history.replaceState(null, '', '/landing');
+    path = '/landing';
+  }
   var frag;
-  if (path.startsWith('/garage/')) {
+  if (path.startsWith('/garage/') || path.startsWith('/hq/')) {
     frag = path;
   } else {
     frag = routes[path] || '/pages/landing/landing.html';

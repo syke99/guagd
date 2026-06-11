@@ -49,6 +49,47 @@ type accountInfo struct {
 	AcctType string
 }
 
+type searchResult struct {
+	Username string
+	AcctType string
+}
+
+func (u *accountClient) searchAccounts(ctx context.Context, q, acctType string) ([]searchResult, error) {
+	var results []searchResult
+	var query string
+	var args []any
+	if acctType != "" {
+		query = `SELECT username, acct_type FROM accounts
+		 WHERE username ILIKE $1
+		 AND username IS NOT NULL
+		 AND acct_type = $2
+		 ORDER BY username
+		 LIMIT 10`
+		args = []any{"%" + q + "%", acctType}
+	} else {
+		query = `SELECT username, acct_type FROM accounts
+		 WHERE username ILIKE $1
+		 AND username IS NOT NULL
+		 ORDER BY username
+		 LIMIT 10`
+		args = []any{"%" + q + "%"}
+	}
+	err := u.db.Query(ctx, query,
+		func(rows pgx.Rows) error {
+			for rows.Next() {
+				var r searchResult
+				if err := rows.Scan(&r.Username, &r.AcctType); err != nil {
+					return err
+				}
+				results = append(results, r)
+			}
+			return rows.Err()
+		},
+		args...,
+	)
+	return results, err
+}
+
 func (u *accountClient) getAccountBySupertokensID(ctx context.Context, supertokensID string) (accountInfo, error) {
 	var info accountInfo
 	err := u.db.QueryRow(ctx,

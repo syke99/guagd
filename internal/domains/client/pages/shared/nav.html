@@ -1,0 +1,89 @@
+{{define "nav"}}
+<nav>
+  <a href="/" class="nav-brand">
+    <img src="/assets/logo.png" alt="Gaugd" class="nav-logo">
+    <div class="logo">GAUG<span>D</span></div>
+  </a>
+  <div class="nav-right">
+    <div class="search-wrap">
+      <input
+        type="text"
+        class="search-input"
+        id="search-input"
+        placeholder="@garage/hq/shop"
+        name="q"
+        autocomplete="off"
+        hx-get="/api/v1/accounts/search"
+        hx-trigger="input changed delay:150ms"
+        hx-target="#search-results"
+        onkeydown="handleSearchKey(event)"
+      >
+      <div id="search-results" class="search-results"></div>
+    </div>
+    {{template "nav-page-controls" .}}
+    <a href="/" class="btn-nav">Home</a>
+    {{if .IsAuthenticated}}
+    <button class="btn-nav" onclick="showLogoutConfirm()">Log Out</button>
+    {{end}}
+  </div>
+  {{template "nav-page-dropdown" .}}
+</nav>
+
+{{if .IsAuthenticated}}
+<div id="logout-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeLogoutModal()">
+  <div class="modal-box">
+    <div class="modal-title">Log Out</div>
+    <p class="modal-message">Are you sure you want to log out?</p>
+    <div class="modal-actions">
+      <button class="btn-nav" onclick="closeLogoutModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmLogout()">Yes, Log Out</button>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<script>
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrap')) {
+    const results = document.getElementById('search-results');
+    if (results) results.innerHTML = '';
+  }
+});
+
+function handleSearchKey(e) {
+  const items = document.querySelectorAll('.search-result-item');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!items.length) return;
+    const active = document.querySelector('.search-result-item.active');
+    const idx = active ? Array.from(items).indexOf(active) : -1;
+    if (active) active.classList.remove('active');
+    items[e.key === 'ArrowDown'
+      ? (idx + 1) % items.length
+      : (idx - 1 + items.length) % items.length
+    ].classList.add('active');
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const target = document.querySelector('.search-result-item.active') || items[0];
+    if (target) window.location.href = target.href;
+  } else if (e.key === 'Escape') {
+    const results = document.getElementById('search-results');
+    if (results) results.innerHTML = '';
+    document.getElementById('search-input').blur();
+  }
+}
+
+{{if .IsAuthenticated}}
+function showLogoutConfirm() {
+  document.getElementById('logout-modal').style.display = 'flex';
+}
+function closeLogoutModal() {
+  document.getElementById('logout-modal').style.display = 'none';
+}
+function confirmLogout() {
+  fetch('/api/v1/accounts/signout', { method: 'POST' })
+    .then(() => { window.location.href = '/'; });
+}
+{{end}}
+</script>
+{{end}}

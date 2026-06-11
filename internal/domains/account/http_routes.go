@@ -2,6 +2,8 @@ package account
 
 import (
 	"encoding/json"
+	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"strings"
@@ -23,6 +25,7 @@ func (u *accountClient) Handlers() map[string]http.HandlerFunc {
 		prefixRoute(u.baseRoute, "signup"):       u.signUp,
 		prefixRoute(u.baseRoute, "signin"):       u.signIn,
 		prefixRoute(u.baseRoute, "signout"):      u.signOut,
+		prefixRoute(u.baseRoute, "search"):       u.search,
 	}
 
 	return routes
@@ -144,6 +147,52 @@ func (u *accountClient) signOut(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
+}
+
+func (u *accountClient) search(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	acctType := r.URL.Query().Get("type")
+
+	results, err := u.searchAccounts(r.Context(), q, acctType)
+	if err != nil {
+		log.Printf("search: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	for _, res := range results {
+		url := searchPageURL(res.Username, res.AcctType)
+		label := searchPageLabel(res.AcctType)
+		fmt.Fprintf(w, `<a class="search-result-item" href="%s">@%s<span class="search-result-badge">%s</span></a>`,
+			url, html.EscapeString(res.Username), label)
+	}
+}
+
+func searchPageURL(username, acctType string) string {
+	switch acctType {
+	case "club":
+		return "/hq/@" + username
+	case "shop":
+		return "/shop/@" + username
+	default:
+		return "/garage/@" + username
+	}
+}
+
+func searchPageLabel(acctType string) string {
+	switch acctType {
+	case "club":
+		return "HQ"
+	case "shop":
+		return "Shop"
+	default:
+		return "Garage"
+	}
 }
 
 func redirect(w http.ResponseWriter, resp models.HTMXRedirectResponse) {

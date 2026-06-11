@@ -1,34 +1,325 @@
 {{define "hq.html"}}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>@{{.Username}}'s Club HQ — Gaugd</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app/style.css">
-<link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
-<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
-</head>
-<body>
+{{template "nav" .}}
 
-<nav>
-  <div class="nav-brand">
-    <img src="/assets/logo.png" alt="Gaugd" class="nav-logo">
-    <div class="logo">GAUG<span>D</span></div>
-  </div>
-  <div class="nav-right">
-    {{if .IsOwner}}
-    <span style="font-size:13px;color:var(--muted2)">Your club HQ</span>
+<div class="hq-wrap">
+  <div class="grid-stack" id="hq-grid">
+    {{range .Layout}}
+    <div class="grid-stack-item"
+         gs-x="{{.X}}" gs-y="{{.Y}}" gs-w="{{.W}}" gs-h="{{.H}}"
+         data-component="{{.Component}}">
+      <div class="grid-stack-item-content" id="gs-{{.Component}}">
+        <span class="gs-handle">⠿</span>
+        {{if eq .Component "hq-profile-header"}}{{template "hq-profile-header" $}}{{end}}
+        {{if eq .Component "member-grid"}}{{template "member-grid" $}}{{end}}
+      </div>
+    </div>
     {{end}}
   </div>
-</nav>
-
-<div style="display:flex;align-items:center;justify-content:center;height:60vh;">
-  <p style="font-size:18px;color:var(--muted)">@{{.Username}}'s club HQ — coming soon</p>
 </div>
 
-</body>
-</html>
+{{if .IsOwner}}
+<div id="theme-editor" class="theme-editor">
+  <div class="theme-editor-title">
+    Style
+    <button class="btn-link" onclick="setEditMode('style')">✕</button>
+  </div>
+
+  <div class="theme-section">
+    <div class="theme-section-title">Global</div>
+    <div class="theme-row"><label>Accent</label><input type="color" id="te-accent" value="#e85d04"></div>
+    <div class="theme-row"><label>Background</label><input type="color" id="te-bg" value="#0a0a0a"></div>
+    <div class="theme-row"><label>Text</label><input type="color" id="te-text" value="#f0f0f0"></div>
+    <div class="theme-row"><label>Card BG</label><input type="color" id="te-bg2" value="#111111"></div>
+    <div class="theme-row"><label>Border</label><input type="color" id="te-border" value="#222222"></div>
+  </div>
+
+  <div class="theme-section">
+    <div class="theme-section-title">Components</div>
+    {{range .Layout}}
+    <details class="component-style-editor">
+      <summary>{{.Component}}</summary>
+      <textarea class="component-css-input"
+                data-component="{{.Component}}"
+                placeholder="background: #1c1c1c;
+border-radius: 16px;"></textarea>
+    </details>
+    {{end}}
+  </div>
+
+  <button class="btn-primary signup-submit" onclick="saveStyle()">Save</button>
+</div>
+{{end}}
+
+<script>
+const grid = GridStack.init({
+  column: 12,
+  cellHeight: 80,
+  staticGrid: true,
+  float: false,
+});
+
+{{if .IsOwner}}
+let editMode = null;
+
+function toggleEdit() {
+  const dropdown = document.getElementById('edit-dropdown');
+  const editBtn = document.getElementById('btn-edit');
+  const open = dropdown.style.display !== 'none';
+  if (open) {
+    dropdown.style.display = 'none';
+    editBtn.classList.remove('active');
+    applyMode(null);
+  } else {
+    dropdown.style.display = 'flex';
+    editBtn.classList.add('active');
+  }
+}
+
+function setEditMode(mode) {
+  applyMode(editMode === mode ? null : mode);
+}
+
+function applyMode(mode) {
+  editMode = mode;
+
+  document.getElementById('btn-layout').classList.toggle('active', mode === 'layout');
+  document.getElementById('btn-style').classList.toggle('active', mode === 'style');
+
+  grid.setStatic(mode !== 'layout');
+  document.getElementById('hq-grid').classList.toggle('edit-layout-active', mode === 'layout');
+  document.getElementById('hq-grid').classList.toggle('edit-style-active', mode === 'style');
+
+  const te = document.getElementById('theme-editor');
+  te.style.display = mode === 'style' ? 'block' : 'none';
+
+  if (mode !== 'layout') {
+    const panel = document.getElementById('add-member-panel');
+    if (panel) panel.style.display = 'none';
+  }
+}
+
+function toggleAddMember() {
+  const panel = document.getElementById('add-member-panel');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (!open) {
+    setTimeout(() => document.getElementById('add-member-input')?.focus(), 50);
+  } else {
+    document.getElementById('add-member-results').innerHTML = '';
+    document.getElementById('add-member-input').value = '';
+  }
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.add-member-tab-anchor')) {
+    const panel = document.getElementById('add-member-panel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
+let _memberSearchTimer = null;
+function searchMembers(q) {
+  clearTimeout(_memberSearchTimer);
+  const results = document.getElementById('add-member-results');
+  if (!q.trim()) { results.innerHTML = ''; return; }
+  _memberSearchTimer = setTimeout(() => {
+    fetch('/api/v1/hq/members/search?q=' + encodeURIComponent(q))
+      .then(r => r.text())
+      .then(html => {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        results.innerHTML = '';
+        tmp.querySelectorAll('.search-result-item').forEach(a => {
+          const rawText = Array.from(a.childNodes)
+            .filter(n => n.nodeType === Node.TEXT_NODE)
+            .map(n => n.textContent.trim())
+            .join('');
+          const username = rawText.startsWith('@') ? rawText.slice(1) : rawText;
+          const badge = a.querySelector('.search-result-badge')?.textContent || '';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'add-member-result-item';
+          btn.innerHTML = `<span>${rawText}</span><span class="search-result-badge">${badge}</span>`;
+          btn.onclick = () => addMemberDirect(username);
+          results.appendChild(btn);
+        });
+      });
+  }, 150);
+}
+
+function addMemberDirect(username) {
+  fetch('/api/v1/hq/members/add', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username}),
+  }).then(r => { if (r.ok) window.location.reload(); });
+}
+
+function handleMemberSearchKey(e) {
+  const items = document.querySelectorAll('.add-member-result-item');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!items.length) return;
+    const active = document.querySelector('.add-member-result-item.active');
+    const idx = active ? Array.from(items).indexOf(active) : -1;
+    if (active) active.classList.remove('active');
+    items[e.key === 'ArrowDown'
+      ? (idx + 1) % items.length
+      : (idx - 1 + items.length) % items.length
+    ].classList.add('active');
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const target = document.querySelector('.add-member-result-item.active') || items[0];
+    if (target) target.click();
+  } else if (e.key === 'Escape') {
+    toggleAddMember();
+  }
+}
+
+grid.on('change', function() {
+  if (editMode !== 'layout') return;
+  const layout = [];
+  grid.getGridItems().forEach(el => {
+    const node = el.gridstackNode;
+    layout.push({
+      component: el.dataset.component,
+      x: node.x, y: node.y, w: node.w, h: node.h,
+    });
+  });
+  fetch('/api/v1/hq/layout', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(layout),
+  });
+});
+
+function parseComponentCSS(text) {
+  const styles = {};
+  text.split('\n').forEach(line => {
+    const colon = line.indexOf(':');
+    if (colon === -1) return;
+    const prop = line.slice(0, colon).trim();
+    const val = line.slice(colon + 1).trim().replace(/;$/, '').trim();
+    if (prop && val) styles[prop] = val;
+  });
+  return styles;
+}
+
+function saveStyle() {
+  const theme = {
+    global: {
+      '--accent': document.getElementById('te-accent').value,
+      '--bg':     document.getElementById('te-bg').value,
+      '--text':   document.getElementById('te-text').value,
+      '--bg2':    document.getElementById('te-bg2').value,
+      '--border': document.getElementById('te-border').value,
+    },
+  };
+  document.querySelectorAll('.component-css-input').forEach(ta => {
+    const component = ta.dataset.component;
+    const styles = parseComponentCSS(ta.value);
+    if (Object.keys(styles).length > 0) theme[component] = styles;
+  });
+  fetch('/api/v1/hq/theme', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(theme),
+  }).then(r => {
+    if (!r.ok) return;
+    Object.entries(theme.global).forEach(([prop, val]) => {
+      document.documentElement.style.setProperty(prop, val);
+    });
+    Object.entries(theme).forEach(([component, styles]) => {
+      if (component === 'global') return;
+      const el = document.getElementById('gs-' + component);
+      if (!el) return;
+      Object.entries(styles).forEach(([prop, val]) => {
+        el.style[prop] = val;
+      });
+    });
+  });
+}
+
+function removeMember(username) {
+  fetch('/api/v1/hq/members/remove', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username}),
+  }).then(() => { window.location.reload(); });
+}
+{{end}}
+</script>
+{{end}}
+
+{{define "nav-page-controls"}}
+{{if .IsOwner}}
+<button id="btn-edit" class="btn-nav" onclick="toggleEdit()">Edit</button>
+{{end}}
+{{end}}
+
+{{define "nav-page-dropdown"}}
+{{if .IsOwner}}
+<div id="edit-dropdown" class="edit-dropdown" style="display:none">
+  <button id="btn-layout" class="edit-dropdown-btn" onclick="setEditMode('layout')">Layout</button>
+  <button id="btn-style" class="edit-dropdown-btn" onclick="setEditMode('style')">Style</button>
+</div>
+{{end}}
+{{end}}
+
+{{define "hq-profile-header"}}
+<div class="hq-profile">
+  <div class="hq-cover"></div>
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <div class="panel-avatar">🏁</div>
+      <div>
+        <div class="panel-title">@{{.Username}}'s Club HQ</div>
+        <div class="panel-sub">@{{.Username}} · {{.MemberCount}} members</div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "member-grid"}}
+<div class="member-grid-wrap">
+  {{if .IsOwner}}
+  <button class="edit-component-btn" data-component="member-grid" title="Edit styles">✏</button>
+  <div class="add-member-tab-anchor">
+    <button class="add-member-btn" onclick="toggleAddMember()">+ Add Member</button>
+    <div id="add-member-panel" class="add-member-panel" style="display:none">
+      <input
+        class="add-member-input"
+        type="text"
+        id="add-member-input"
+        placeholder="Search @username..."
+        autocomplete="off"
+        oninput="searchMembers(this.value)"
+        onkeydown="handleMemberSearchKey(event)"
+      >
+      <div id="add-member-results" class="add-member-results"></div>
+    </div>
+  </div>
+  {{end}}
+  <div class="member-grid">
+    {{range .Members}}
+    <div class="member-card-wrap">
+      <a class="member-card" href="/garage/@{{.Username}}">
+        <div class="member-card-thumb">
+          <div class="member-card-avatar">👤</div>
+        </div>
+        <div class="member-card-info">
+          <div class="member-card-username">@{{.Username}}</div>
+        </div>
+      </a>
+      {{if $.IsOwner}}
+      <button class="member-remove-btn" onclick="removeMember('{{.Username}}')">✕</button>
+      {{end}}
+    </div>
+    {{else}}
+    <div class="hq-empty-state">No members yet.</div>
+    {{end}}
+  </div>
+</div>
 {{end}}
