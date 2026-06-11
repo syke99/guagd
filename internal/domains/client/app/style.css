@@ -1233,12 +1233,26 @@ footer span { font-size: 13px; color: var(--muted); }
   margin: 0 auto;
 }
 
-.hq-profile { height: 100%; }
-
-.hq-cover {
-  height: 80px;
+.hq-profile {
+  height: 100%;
+  position: relative;
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, var(--bg2)), var(--bg2));
-  border-radius: 12px 12px 0 0;
+  border-radius: 12px;
+}
+
+.hq-profile-tab {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-left: none;
+  border-radius: 0 8px 0 0;
+  padding: 8px 16px;
 }
 
 .member-grid-wrap {

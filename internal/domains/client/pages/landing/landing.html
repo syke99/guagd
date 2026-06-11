@@ -192,8 +192,10 @@
     let timer;
 
     function goTo(index) {
+      const track = document.getElementById('track');
+      if (!track) { clearInterval(timer); return; }
       current = index;
-      document.getElementById('track').style.transform = `translateX(-${index * 100}%)`;
+      track.style.transform = `translateX(-${index * 100}%)`;
       document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === index));
       document.getElementById('carousel-label').textContent = labels[index];
       resetTimer();
