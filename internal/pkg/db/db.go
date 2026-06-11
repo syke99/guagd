@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type database struct {
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
 type DB interface {
@@ -17,14 +18,12 @@ type DB interface {
 }
 
 func Connect(url string) (DB, error) {
-	conn, err := pgx.Connect(context.Background(), url)
+	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {
 		return nil, err
 	}
 
-	return &database{
-		conn: conn,
-	}, nil
+	return &database{pool: pool}, nil
 }
 
 type Results func(pgx.Rows) error
@@ -53,39 +52,22 @@ func WithResultOf[T any](dest *T) Result {
 }
 
 func (d *database) Exec(ctx context.Context, sql string, args ...any) error {
-	_, err := d.conn.Exec(ctx, sql, args...)
+	_, err := d.pool.Exec(ctx, sql, args...)
 	return err
 }
 
 func (d *database) Query(ctx context.Context, sql string, result Results, args ...any) error {
-	queryArgs := make([]any, len(args))
-
-	copy(queryArgs, args)
-
-	rows, err := d.conn.Query(ctx, sql, queryArgs)
+	rows, err := d.pool.Query(ctx, sql, args...)
 	if err != nil {
 		return err
 	}
-	err = result(rows)
-	if err != nil {
-		return err
-	}
-	return nil
+	return result(rows)
 }
 
 func (d *database) QueryRow(ctx context.Context, sql string, result Result, args ...any) error {
-	queryArgs := make([]any, len(args))
-
-	copy(queryArgs, args)
-
-	rows, err := d.conn.Query(ctx, sql, queryArgs)
+	rows, err := d.pool.Query(ctx, sql, args...)
 	if err != nil {
 		return err
 	}
-
-	err = result(rows)
-	if err != nil {
-		return err
-	}
-	return nil
+	return result(rows)
 }

@@ -7,10 +7,15 @@
   </div>
   <div class="nav-right">
     <a href="#"
-       hx-get="/landing/landing.html"
+       hx-get="/pages/landing/landing.html"
        hx-target="#app"
        hx-swap="innerHTML"
        hx-push-url="/">Home</a>
+    <button class="btn-nav"
+            hx-get="/waitlist"
+            hx-target="#app"
+            hx-swap="innerHTML"
+            hx-push-url="/waitlist">Request Early Access</button>
   </div>
 </nav>
 
@@ -36,7 +41,7 @@
     <div class="auth-footer">
       <span class="auth-footer-text">Don't have an account?</span>
       <button class="btn-link"
-              hx-get="/landing/landing.html"
+              hx-get="/pages/landing/landing.html"
               hx-target="#app"
               hx-swap="innerHTML"
               hx-push-url="/">

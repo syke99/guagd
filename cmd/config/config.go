@@ -19,7 +19,7 @@ type Config struct {
 	PublicURL  string `json:"PUBLIC_URL"  yaml:"PUBLIC_URL"  env:"PUBLIC_URL"`
 	// Auth
 	SuperTokensCoreURL string `json:"SUPERTOKENS_CORE_URL"  yaml:"SUPERTOKENS_CORE_URL"  env:"SUPERTOKENS_CORE_URL"`
-	SuperTokensAPIKey  string `json:"SUPER_TOKENS_API_KEY" yaml:"SUPER_TOKENS_API_KEY" env:"SUPER_TOKENS_API_KEY"`
+	SuperTokensAPIKey  string `json:"SUPERTOKENS_API_KEY" yaml:"SUPERTOKENS_API_KEY" env:"SUPERTOKENS_API_KEY"`
 }
 
 type LoadOption func(*loadOptions)

@@ -78,6 +78,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		prefixRoute(c.baseRoute, "signin"):           c.signinPage,
 		prefixRoute(c.baseRoute, "signin/failure"):   c.signinFailure,
 		prefixRoute(c.baseRoute, "track/visit"):   c.trackVisit,
+		prefixRoute(c.baseRoute, "access"):        c.accessPage,
 		"/garage/{username}":                       c.garage.GaragePage,
 		"/api/v1/garage/layout":                    middleware.RequireAuth(c.garage.SaveLayout),
 		"/api/v1/garage/theme":                     middleware.RequireAuth(c.garage.SaveTheme),
@@ -113,6 +114,11 @@ func (c *client) signinPage(w http.ResponseWriter, r *http.Request) {
 
 func (c *client) signinFailure(w http.ResponseWriter, r *http.Request) {
 	http.ServeFileFS(w, r, landing, "pages/landing/signin/failure.html")
+}
+
+func (c *client) accessPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, `<!DOCTYPE html><html><body><script>localStorage.setItem('gaugd_early_access','true');window.location.href='/';</script></body></html>`)
 }
 
 func (c *client) trackVisit(w http.ResponseWriter, r *http.Request) {

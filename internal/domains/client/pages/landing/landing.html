@@ -13,6 +13,11 @@
             hx-target="#app"
             hx-swap="innerHTML"
             hx-push-url="/signin">Sign In</button>
+    <button class="btn-nav" id="early-access-signup" style="display:none"
+            hx-get="/signup"
+            hx-target="#app"
+            hx-swap="innerHTML"
+            hx-push-url="/signup">Create Account</button>
     <button class="btn-nav" hx-get="/waitlist" hx-target="#hero-right" hx-swap="innerHTML">Request Early Access</button>
   </div>
 </nav>
@@ -242,6 +247,11 @@
   <span>© 2025 Gaugd. All rights reserved.</span>
 </footer>
 
-<script>navigator.sendBeacon('/track/visit');</script>
+<script>
+  if (localStorage.getItem('gaugd_early_access') === 'true') {
+    document.getElementById('early-access-signup').style.display = '';
+  }
+  navigator.sendBeacon('/track/visit');
+</script>
 
 </div>

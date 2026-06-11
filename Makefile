@@ -1,5 +1,6 @@
 CONFIG        ?= environment.json
 ST_DB_URL     ?= $(shell jq -r '.SUPERTOKENS_DB_URL' $(CONFIG))
+ST_API_KEY    ?= $(shell jq -r '.SUPERTOKENS_API_KEY' $(CONFIG))
 MIGRATION_URL ?= $(shell jq -r '.MIGRATION_URL' $(CONFIG))
 ST_CONTAINER   = guagd-supertokens
 
@@ -14,6 +15,7 @@ supertokens:
 		docker run -d --name $(ST_CONTAINER) \
 			-p 3567:3567 \
 			-e POSTGRESQL_CONNECTION_URI="$(ST_DB_URL)" \
+			-e API_KEYS="$(ST_API_KEY)" \
 			supertokens/supertokens-postgresql:latest; \
 	fi
 	@echo "waiting for supertokens..." && until curl -sf http://localhost:3567/hello >/dev/null; do sleep 1; done && echo "supertokens ready"
