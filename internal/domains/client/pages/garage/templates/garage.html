@@ -19,18 +19,50 @@
   margin: 0 auto;
 }
 
-.garage-controls {
-  position: fixed;
-  top: 88px;
-  right: 24px;
+/* Edit dropdown — hangs off the navbar */
+.edit-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 56px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 8px 10px;
   display: flex;
-  gap: 8px;
-  z-index: 200;
+  gap: 6px;
+  z-index: 99;
 }
 
-.grid-stack {
-  background: transparent;
+#btn-edit.active {
+  border-color: var(--accent);
+  color: var(--accent);
 }
+
+.edit-dropdown-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted2);
+  cursor: pointer;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.edit-dropdown-btn:hover {
+  border-color: var(--border2);
+  color: var(--text);
+}
+.edit-dropdown-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(232, 93, 4, 0.08);
+}
+
+.grid-stack { background: transparent; }
 
 .grid-stack-item-content {
   background: var(--bg2);
@@ -50,10 +82,7 @@
   z-index: 10;
   display: none;
 }
-
-.edit-layout-active .gs-handle {
-  display: block;
-}
+.edit-layout-active .gs-handle { display: block; }
 
 .edit-component-btn {
   position: absolute;
@@ -67,12 +96,10 @@
   cursor: pointer;
   padding: 2px 6px;
   font-size: 12px;
+  display: none;
 }
-
-.edit-component-btn:hover {
-  color: var(--text);
-  border-color: var(--border2);
-}
+.edit-style-active .edit-component-btn { display: block; }
+.edit-component-btn:hover { color: var(--text); border-color: var(--border2); }
 
 .theme-editor {
   position: fixed;
@@ -87,7 +114,6 @@
   z-index: 300;
   display: none;
 }
-
 .theme-editor-title {
   font-size: 14px;
   font-weight: 700;
@@ -97,11 +123,7 @@
   justify-content: space-between;
   align-items: center;
 }
-
-.theme-section {
-  margin-bottom: 24px;
-}
-
+.theme-section { margin-bottom: 24px; }
 .theme-section-title {
   font-size: 11px;
   font-weight: 600;
@@ -110,19 +132,13 @@
   letter-spacing: 0.08em;
   margin-bottom: 12px;
 }
-
 .theme-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
 }
-
-.theme-row label {
-  font-size: 13px;
-  color: var(--muted2);
-}
-
+.theme-row label { font-size: 13px; color: var(--muted2); }
 .theme-row input[type="color"] {
   width: 36px;
   height: 28px;
@@ -132,11 +148,7 @@
   cursor: pointer;
   padding: 2px;
 }
-
-.component-style-editor {
-  margin-bottom: 12px;
-}
-
+.component-style-editor { margin-bottom: 12px; }
 .component-style-editor summary {
   font-size: 13px;
   color: var(--muted2);
@@ -144,11 +156,7 @@
   padding: 6px 0;
   text-transform: capitalize;
 }
-
-.component-style-editor summary:hover {
-  color: var(--text);
-}
-
+.component-style-editor summary:hover { color: var(--text); }
 .component-css-input {
   width: 100%;
   min-height: 80px;
@@ -169,7 +177,6 @@
   padding: 20px;
   text-align: center;
 }
-
 .garage-profile {
   padding: 20px;
   height: 100%;
@@ -178,10 +185,7 @@
   flex-direction: column;
   justify-content: center;
 }
-
-.garage-car-grid {
-  padding: 12px;
-}
+.garage-car-grid { padding: 12px; }
 </style>
 </head>
 <body>
@@ -193,17 +197,16 @@
   </div>
   <div class="nav-right">
     {{if .IsOwner}}
-    <span style="font-size:13px;color:var(--muted2)">Your garage</span>
+    <button id="btn-edit" class="btn-nav" onclick="toggleEdit()">Edit</button>
     {{end}}
   </div>
+  {{if .IsOwner}}
+  <div id="edit-dropdown" class="edit-dropdown" style="display:none">
+    <button id="btn-layout" class="edit-dropdown-btn" onclick="setEditMode('layout')">Layout</button>
+    <button id="btn-style" class="edit-dropdown-btn" onclick="setEditMode('style')">Style</button>
+  </div>
+  {{end}}
 </nav>
-
-{{if .IsOwner}}
-<div class="garage-controls">
-  <button id="btn-edit-layout" class="btn-ghost" onclick="toggleEditLayout()">Edit Layout</button>
-  <button id="btn-edit-theme" class="btn-ghost" onclick="toggleThemeEditor()">Edit Theme</button>
-</div>
-{{end}}
 
 <div class="garage-wrap">
   <div class="grid-stack" id="garage-grid">
@@ -224,8 +227,8 @@
 {{if .IsOwner}}
 <div id="theme-editor" class="theme-editor">
   <div class="theme-editor-title">
-    Edit Theme
-    <button class="btn-link" onclick="toggleThemeEditor()">✕</button>
+    Style
+    <button class="btn-link" onclick="setEditMode('style')">✕</button>
   </div>
 
   <div class="theme-section">
@@ -250,15 +253,12 @@ border-radius: 16px;"></textarea>
     {{end}}
   </div>
 
-  <button class="btn-primary signup-submit" onclick="saveTheme()">Save Theme</button>
+  <button class="btn-primary signup-submit" onclick="saveStyle()">Save</button>
 </div>
 {{end}}
 
 <script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <script>
-const isOwner = {{if .IsOwner}}true{{else}}false{{end}};
-let editLayoutMode = false;
-
 const grid = GridStack.init({
   column: 12,
   cellHeight: 80,
@@ -267,16 +267,43 @@ const grid = GridStack.init({
 });
 
 {{if .IsOwner}}
-function toggleEditLayout() {
-  editLayoutMode = !editLayoutMode;
-  grid.setStatic(!editLayoutMode);
-  const btn = document.getElementById('btn-edit-layout');
-  btn.textContent = editLayoutMode ? 'Done Editing' : 'Edit Layout';
-  document.getElementById('garage-grid').classList.toggle('edit-layout-active', editLayoutMode);
+let editMode = null; // null | 'layout' | 'style'
+
+function toggleEdit() {
+  const dropdown = document.getElementById('edit-dropdown');
+  const editBtn = document.getElementById('btn-edit');
+  const open = dropdown.style.display !== 'none';
+  if (open) {
+    dropdown.style.display = 'none';
+    editBtn.classList.remove('active');
+    applyMode(null);
+  } else {
+    dropdown.style.display = 'flex';
+    editBtn.classList.add('active');
+  }
+}
+
+function setEditMode(mode) {
+  // toggle off if already active, otherwise switch
+  applyMode(editMode === mode ? null : mode);
+}
+
+function applyMode(mode) {
+  editMode = mode;
+
+  document.getElementById('btn-layout').classList.toggle('active', mode === 'layout');
+  document.getElementById('btn-style').classList.toggle('active', mode === 'style');
+
+  grid.setStatic(mode !== 'layout');
+  document.getElementById('garage-grid').classList.toggle('edit-layout-active', mode === 'layout');
+  document.getElementById('garage-grid').classList.toggle('edit-style-active', mode === 'style');
+
+  const te = document.getElementById('theme-editor');
+  te.style.display = mode === 'style' ? 'block' : 'none';
 }
 
 grid.on('change', function() {
-  if (!editLayoutMode) return;
+  if (editMode !== 'layout') return;
   const layout = [];
   grid.getGridItems().forEach(el => {
     const node = el.gridstackNode;
@@ -292,17 +319,18 @@ grid.on('change', function() {
   });
 });
 
-function toggleThemeEditor() {
-  const editor = document.getElementById('theme-editor');
-  editor.style.display = editor.style.display === 'none' || editor.style.display === '' ? 'block' : 'none';
-}
-
 document.querySelectorAll('.edit-component-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     const component = this.dataset.component;
-    const details = document.querySelector(`.component-style-editor[data-component="${component}"]`);
+    // make sure style mode is active
+    if (editMode !== 'style') {
+      const dropdown = document.getElementById('edit-dropdown');
+      dropdown.style.display = 'flex';
+      document.getElementById('btn-edit').classList.add('active');
+      applyMode('style');
+    }
+    const details = document.querySelector(`.component-style-editor[data-for="${component}"]`);
     if (details) {
-      document.getElementById('theme-editor').style.display = 'block';
       details.open = true;
       details.scrollIntoView({ behavior: 'smooth' });
     }
@@ -321,7 +349,7 @@ function parseComponentCSS(text) {
   return styles;
 }
 
-function saveTheme() {
+function saveStyle() {
   const theme = {
     global: {
       '--accent':  document.getElementById('te-accent').value,

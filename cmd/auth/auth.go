@@ -2,9 +2,11 @@ package auth
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -21,7 +23,11 @@ func Init(coreURL, publicURL, apiKey string) {
 		},
 		RecipeList: []supertokens.Recipe{
 			emailpassword.Init(nil),
-			session.Init(nil),
+			session.Init(&sessmodels.TypeInput{
+				GetTokenTransferMethod: func(req *http.Request, forCreateNewSession bool, userContext supertokens.UserContext) sessmodels.TokenTransferMethod {
+					return sessmodels.CookieTransferMethod
+				},
+			}),
 		},
 	})
 	if err != nil {

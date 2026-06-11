@@ -120,6 +120,19 @@ func (u *accountClient) signIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setCookies := w.Header()["Set-Cookie"]
+	log.Printf("signIn: session created, Set-Cookie count=%d", len(setCookies))
+	for _, c := range setCookies {
+		// log name + attributes only, skip the token value
+		parts := strings.SplitN(c, ";", 2)
+		name := strings.SplitN(parts[0], "=", 2)[0]
+		attrs := ""
+		if len(parts) > 1 {
+			attrs = strings.TrimSpace(parts[1])
+		}
+		log.Printf("signIn: cookie %q attrs: %s", name, attrs)
+	}
+
 	dest := "/garage/@" + info.Username
 	if info.AcctType == "club" {
 		dest = "/hq/@" + info.Username
