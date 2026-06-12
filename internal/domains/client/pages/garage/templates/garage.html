@@ -435,20 +435,21 @@ function openCarModal(wrap) {
   const trim = wrap.dataset.trim || '';
   const primaryURL = wrap.dataset.primaryPhotoUrl || '';
   activeCarId = id;
-  currentModalCar = {id, year, make, model, trim, primaryURL, photos: null};
+  currentModalCar = {id, year, make, model, trim, primaryURL, photos: null, mods: null};
 
   renderCarModal(currentModalCar);
   document.getElementById('car-modal').style.display = 'flex';
   history.replaceState(null, '', window.location.pathname + '?car=' + id.slice(0, 8));
 
-  fetch('/api/v1/garage/cars/photos?car_id=' + id)
-    .then(r => r.ok ? r.json() : [])
-    .then(photos => {
-      if (activeCarId === id) {
-        currentModalCar = Object.assign({}, currentModalCar, {photos});
-        renderCarModal(currentModalCar);
-      }
-    });
+  Promise.all([
+    fetch('/api/v1/garage/cars/photos?car_id=' + id).then(r => r.ok ? r.json() : []),
+    fetch('/api/v1/garage/cars/mods?car_id=' + id).then(r => r.ok ? r.json() : []),
+  ]).then(([photos, mods]) => {
+    if (activeCarId === id) {
+      currentModalCar = Object.assign({}, currentModalCar, {photos, mods});
+      renderCarModal(currentModalCar);
+    }
+  });
 }
 
 function copyCar(btn, shortId) {
@@ -466,7 +467,7 @@ function closeCarModal() {
   history.replaceState(null, '', window.location.pathname);
 }
 
-function renderCarModal({id, year, make, model, trim, primaryURL, photos}) {
+function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods}) {
   const canEdit = isOwner && editMode !== null;
 
   const coverClick = canEdit
@@ -493,11 +494,11 @@ function renderCarModal({id, year, make, model, trim, primaryURL, photos}) {
           <div class="build-car-sub">${trim || 'Build Details'}</div>
         </div>
         <div class="build-stats">
-          <div class="stat"><div class="stat-val">0</div><div class="stat-label">Mods</div></div>
+          <div class="stat"><div class="stat-val">${mods ? mods.length : '—'}</div><div class="stat-label">Mods</div></div>
           <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
         </div>
       </div>
-      <div style="padding:20px 0;color:var(--muted);font-size:13px;text-align:center;border-bottom:1px solid var(--border)">No mods documented yet.</div>
+      ${buildModList(id, mods, canEdit)}
       <div class="build-url" style="margin:20px 0">
         <span>${window.location.origin}${window.location.pathname}?car=${id.slice(0,8)}</span>
         <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'${id.slice(0,8)}')">Copy</button>
@@ -531,6 +532,117 @@ function buildPhotoStrip(carId, photos, canEdit) {
   }
 
   return `<div class="photo-strip">${thumbs}${remaining}${addBtn}</div>`;
+}
+
+// ── Mod list ──────────────────────────────────────────────────
+
+const MOD_CATEGORIES = ['Engine','Intake','Exhaust','Turbo/FI','Suspension','Wheels','Tires','Brakes','Exterior','Interior','Electronics','Transmission','Cooling','Fuel','Tuning','Safety','Other'];
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatModDate(dateStr) {
+  if (!dateStr) return '';
+  const [year, month] = dateStr.split('-');
+  return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', {month: 'short', year: 'numeric'});
+}
+
+function formatMileage(n) { return n ? n.toLocaleString() + ' mi' : ''; }
+function formatCost(n) { return n ? '$' + n.toLocaleString() : ''; }
+
+function buildModList(carId, mods, canEdit) {
+  let rows = '';
+  if (!mods) {
+    rows = `<div class="mod-empty">Loading...</div>`;
+  } else if (mods.length === 0) {
+    rows = `<div class="mod-empty">No mods documented yet.</div>`;
+  } else {
+    rows = mods.map(m => {
+      const meta = [formatModDate(m.install_date), formatMileage(m.mileage_at_install), formatCost(m.cost)].filter(Boolean).join(' · ');
+      const removeBtn = canEdit
+        ? `<button class="mod-remove-btn" onclick="removeCarMod('${escHtml(m.id)}','${carId}')">✕</button>`
+        : '';
+      return `<div class="mod-row">
+        <div style="flex:1;min-width:0">
+          <div class="mod-entry-top">
+            <span class="mod-category-badge">${escHtml(m.category)}</span>
+            <span class="mod-name">${escHtml(m.name)}</span>
+          </div>
+          ${meta ? `<div class="mod-meta">${meta}</div>` : ''}
+          ${m.notes ? `<div class="mod-notes">${escHtml(m.notes)}</div>` : ''}
+        </div>
+        ${removeBtn}
+      </div>`;
+    }).join('');
+  }
+
+  const catOptions = MOD_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+  const addForm = canEdit ? `
+    <div class="add-mod-wrap">
+      <button class="add-mod-toggle-btn" onclick="toggleAddMod('${carId}')">+ Add Mod</button>
+      <div id="add-mod-form-${carId}" class="add-mod-form" style="display:none">
+        <input id="mod-name-${carId}" class="add-mod-field" placeholder="Mod name *" autocomplete="off">
+        <div class="add-mod-row-2">
+          <select id="mod-cat-${carId}" class="add-mod-field">
+            <option value="">Category</option>
+            ${catOptions}
+          </select>
+          <div class="add-mod-labeled-field">
+            <label class="add-mod-label">Install date</label>
+            <input type="date" id="mod-date-${carId}" class="add-mod-field" style="margin:0">
+          </div>
+        </div>
+        <div class="add-mod-row-2">
+          <input type="number" id="mod-mileage-${carId}" class="add-mod-field" placeholder="Mileage at install">
+          <input type="number" id="mod-cost-${carId}" class="add-mod-field" placeholder="Cost ($)">
+        </div>
+        <textarea id="mod-notes-${carId}" class="add-mod-field" placeholder="Notes" rows="2"></textarea>
+        <div class="add-mod-actions">
+          <button class="btn-primary" style="font-size:13px;padding:8px 18px" onclick="submitAddMod('${carId}')">Save Mod</button>
+          <button class="btn-nav" style="font-size:13px;padding:8px 18px" onclick="toggleAddMod('${carId}')">Cancel</button>
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  return `<div class="mod-list-section">${rows}${addForm}</div>`;
+}
+
+function toggleAddMod(carId) {
+  const form = document.getElementById('add-mod-form-' + carId);
+  if (!form) return;
+  const open = form.style.display !== 'none';
+  form.style.display = open ? 'none' : 'block';
+  if (!open) setTimeout(() => document.getElementById('mod-name-' + carId)?.focus(), 50);
+}
+
+async function submitAddMod(carId) {
+  const nameEl = document.getElementById('mod-name-' + carId);
+  const name = nameEl?.value.trim();
+  if (!name) { nameEl?.focus(); return; }
+  const category = document.getElementById('mod-cat-' + carId)?.value || 'Other';
+  const install_date = document.getElementById('mod-date-' + carId)?.value || '';
+  const mileage_at_install = parseInt(document.getElementById('mod-mileage-' + carId)?.value) || 0;
+  const cost = parseInt(document.getElementById('mod-cost-' + carId)?.value) || 0;
+  const notes = document.getElementById('mod-notes-' + carId)?.value.trim() || '';
+
+  const res = await fetch('/api/v1/garage/cars/mods/add?car_id=' + carId, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, category: category || 'Other', install_date, mileage_at_install, cost, notes}),
+  });
+  if (!res.ok) return;
+  const mod = await res.json();
+  currentModalCar = Object.assign({}, currentModalCar, {mods: [...(currentModalCar.mods || []), mod]});
+  renderCarModal(currentModalCar);
+}
+
+async function removeCarMod(modId, carId) {
+  const res = await fetch('/api/v1/garage/cars/mods/remove?mod_id=' + modId, {method: 'DELETE'});
+  if (!res.ok) return;
+  currentModalCar = Object.assign({}, currentModalCar, {mods: (currentModalCar.mods || []).filter(m => m.id !== modId)});
+  renderCarModal(currentModalCar);
 }
 
 async function confirmCarPhoto(objectKey) {

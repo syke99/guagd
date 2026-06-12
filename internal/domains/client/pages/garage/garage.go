@@ -335,3 +335,72 @@ func (g *GarageClient) removeCoverPhoto(ctx context.Context, accountID string) e
 		accountID,
 	)
 }
+
+func (g *GarageClient) getMods(ctx context.Context, carID string) ([]models.Mod, error) {
+	var mods []models.Mod
+	err := g.db.Query(ctx,
+		`SELECT id::text,
+		        car_id::text                     AS car_id,
+		        name,
+		        category,
+		        COALESCE(install_date::text, '')  AS install_date,
+		        COALESCE(mileage_at_install, 0)   AS mileage_at_install,
+		        COALESCE(cost, 0)                 AS cost,
+		        COALESCE(notes, '')               AS notes
+		 FROM car_mods WHERE car_id = $1
+		 ORDER BY created_at ASC`,
+		db.WithResultsOf(&mods),
+		carID,
+	)
+	return mods, err
+}
+
+func (g *GarageClient) addMod(ctx context.Context, accountID, carID string, m models.Mod) (models.Mod, error) {
+	var owned int
+	err := g.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM cars WHERE id = $1 AND owner_id = $2`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return pgx.ErrNoRows
+			}
+			return rows.Scan(&owned)
+		},
+		carID, accountID,
+	)
+	if err != nil || owned == 0 {
+		return models.Mod{}, fmt.Errorf("car not found")
+	}
+
+	// Normalize month-only dates from the browser's <input type="month">
+	if len(m.InstallDate) == 7 {
+		m.InstallDate = m.InstallDate + "-01"
+	}
+
+	var created models.Mod
+	err = g.db.QueryRow(ctx,
+		`INSERT INTO car_mods (car_id, name, category, install_date, mileage_at_install, cost, notes)
+		 VALUES ($1, $2, $3, NULLIF($4,'')::date, NULLIF($5,0), NULLIF($6,0), NULLIF($7,''))
+		 RETURNING id::text,
+		           car_id::text                     AS car_id,
+		           name,
+		           category,
+		           COALESCE(install_date::text, '')  AS install_date,
+		           COALESCE(mileage_at_install, 0)   AS mileage_at_install,
+		           COALESCE(cost, 0)                 AS cost,
+		           COALESCE(notes, '')               AS notes`,
+		db.WithResultOf(&created),
+		carID, m.Name, m.Category, m.InstallDate, m.MileageAtInstall, m.Cost, m.Notes,
+	)
+	return created, err
+}
+
+func (g *GarageClient) removeMod(ctx context.Context, accountID, modID string) error {
+	return g.db.Exec(ctx,
+		`DELETE FROM car_mods cm
+		 USING cars
+		 WHERE cm.id = $1
+		   AND cm.car_id = cars.id
+		   AND cars.owner_id = $2`,
+		modID, accountID,
+	)
+}

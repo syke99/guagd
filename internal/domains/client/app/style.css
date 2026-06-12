@@ -420,6 +420,128 @@ h1 em {
   border-color: var(--accent);
 }
 
+.mod-list-section {
+  padding-bottom: 4px;
+}
+
+.mod-empty {
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.mod-entry-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mod-category-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 100px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mod-notes {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+.mod-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.mod-remove-btn:hover { color: var(--text); background: var(--bg3); }
+
+.add-mod-wrap {
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.add-mod-toggle-btn {
+  background: transparent;
+  border: 1px dashed var(--border2);
+  color: var(--muted2);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 7px 14px;
+  border-radius: 6px;
+  width: 100%;
+  transition: border-color 0.15s, color 0.15s;
+}
+.add-mod-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.add-mod-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-mod-field {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.add-mod-field:focus { outline: none; border-color: var(--accent); }
+.add-mod-field::placeholder { color: var(--muted); }
+
+.add-mod-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.add-mod-labeled-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.add-mod-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+  padding-left: 2px;
+}
+
+.add-mod-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .photo-strip {
   display: flex;
   gap: 3px;

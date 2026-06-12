@@ -341,3 +341,70 @@ func (g *GarageClient) RemoveCoverPhoto(w http.ResponseWriter, r *http.Request) 
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (g *GarageClient) GetCarMods(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	if carID == "" {
+		http.Error(w, "car_id required", http.StatusBadRequest)
+		return
+	}
+	mods, err := g.getMods(r.Context(), carID)
+	if err != nil {
+		log.Printf("getCarMods: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if mods == nil {
+		mods = []models.Mod{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(mods)
+}
+
+func (g *GarageClient) AddCarMod(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	if carID == "" {
+		http.Error(w, "car_id required", http.StatusBadRequest)
+		return
+	}
+	var body models.Mod
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.Name) == "" {
+		http.Error(w, "name required", http.StatusBadRequest)
+		return
+	}
+	if body.Category == "" {
+		body.Category = "Other"
+	}
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	mod, err := g.addMod(r.Context(), id, carID, body)
+	if err != nil {
+		log.Printf("addCarMod: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(mod)
+}
+
+func (g *GarageClient) RemoveCarMod(w http.ResponseWriter, r *http.Request) {
+	modID := r.URL.Query().Get("mod_id")
+	if modID == "" {
+		http.Error(w, "mod_id required", http.StatusBadRequest)
+		return
+	}
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.removeMod(r.Context(), id, modID); err != nil {
+		log.Printf("removeCarMod: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
