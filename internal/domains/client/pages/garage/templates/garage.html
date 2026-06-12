@@ -103,22 +103,22 @@ let currentModalCar = null;
 
 {{if .IsOwner}}
 function toggleEdit() {
-  const dropdown = document.getElementById('edit-dropdown');
+  const subRows = document.getElementById('edit-sub-rows');
   const editBtn = document.getElementById('btn-edit');
-  const open = dropdown.style.display !== 'none';
+  const open = subRows && subRows.style.display !== 'none';
   if (open) {
-    dropdown.style.display = 'none';
+    if (subRows) subRows.style.display = 'none';
     editBtn.classList.remove('active');
     applyMode(null);
   } else {
-    dropdown.style.display = 'flex';
+    if (subRows) subRows.style.display = 'flex';
     editBtn.classList.add('active');
     applyMode('edit');
   }
 }
 
 function setEditMode(mode) {
-  applyMode(editMode === mode ? null : mode);
+  applyMode(editMode === mode ? 'edit' : mode);
 }
 
 function applyMode(mode) {
@@ -719,15 +719,15 @@ function onCarPhotoAdded(carId, objectKey) {
 
 {{define "nav-page-controls"}}
 {{if .IsOwner}}
-<button id="btn-edit" class="btn-nav" onclick="toggleEdit()">Edit</button>
+<button id="btn-edit" class="nav-menu-item" onclick="toggleEdit()">Edit</button>
 {{end}}
 {{end}}
 
 {{define "nav-page-dropdown"}}
 {{if .IsOwner}}
-<div id="edit-dropdown" class="edit-dropdown" style="display:none">
-  <button id="btn-layout" class="edit-dropdown-btn" onclick="setEditMode('layout')">Layout</button>
-  <button id="btn-style" class="edit-dropdown-btn" onclick="setEditMode('style')">Style</button>
+<div id="edit-sub-rows" style="display:none">
+  <button id="btn-layout" class="nav-menu-subitem" onclick="setEditMode('layout')">Layout</button>
+  <button id="btn-style" class="nav-menu-subitem" onclick="setEditMode('style')">Style</button>
 </div>
 {{end}}
 {{end}}

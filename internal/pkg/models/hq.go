@@ -25,4 +25,5 @@ type HQPageData struct {
 	Layout          []LayoutItem
 	SafeCSS         template.CSS
 	CoverPhotoURL   string
+	AvatarURL       string
 }

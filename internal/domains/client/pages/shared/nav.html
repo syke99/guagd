@@ -20,13 +20,20 @@
       >
       <div id="search-results" class="search-results"></div>
     </div>
-    {{template "nav-page-controls" .}}
-    <a href="/" class="btn-nav">Home</a>
-    {{if .IsAuthenticated}}
-    <button class="btn-nav" onclick="showLogoutConfirm()">Log Out</button>
-    {{end}}
+    <div class="nav-avatar-menu" id="nav-avatar-menu">
+      <button class="nav-avatar-btn" id="nav-avatar-btn" onclick="toggleNavMenu(event)">
+        {{if .AvatarURL}}<img class="nav-avatar-img" src="{{.AvatarURL}}" alt="">{{else}}<span class="nav-avatar-emoji">👤</span>{{end}}
+      </button>
+      <div class="nav-menu-dropdown" id="nav-menu-dropdown" style="display:none">
+        {{template "nav-page-controls" .}}
+        {{template "nav-page-dropdown" .}}
+        <a href="/" class="nav-menu-item">Home</a>
+        {{if .IsAuthenticated}}
+        <button class="nav-menu-item" onclick="showLogoutConfirm(); closeNavMenu()">Log Out</button>
+        {{end}}
+      </div>
+    </div>
   </div>
-  {{template "nav-page-dropdown" .}}
 </nav>
 
 {{if .IsAuthenticated}}
@@ -48,7 +55,21 @@ document.addEventListener('click', function(e) {
     const results = document.getElementById('search-results');
     if (results) results.innerHTML = '';
   }
+  if (!e.target.closest('#nav-avatar-menu')) {
+    closeNavMenu();
+  }
 });
+
+function toggleNavMenu(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('nav-menu-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'flex' : 'none';
+}
+
+function closeNavMenu() {
+  const dd = document.getElementById('nav-menu-dropdown');
+  if (dd) dd.style.display = 'none';
+}
 
 function handleSearchKey(e) {
   const items = document.querySelectorAll('.search-result-item');
