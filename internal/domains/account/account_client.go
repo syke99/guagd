@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 
+	"guagd/internal/pkg/auth"
 	"guagd/internal/pkg/db"
 	"guagd/internal/pkg/models"
 )
@@ -10,10 +11,11 @@ import (
 type accountClient struct {
 	baseRoute string
 	db        db.DB
+	auth      auth.Auth
 }
 
 func NewAccountClient(baseRoute string, db db.DB) *accountClient {
-	return &accountClient{baseRoute: baseRoute, db: db}
+	return &accountClient{baseRoute: baseRoute, db: db, auth: &auth.SuperTokensAuth{}}
 }
 
 func (u *accountClient) createAccount(ctx context.Context, supertokensID, username, email, acctType string) error {

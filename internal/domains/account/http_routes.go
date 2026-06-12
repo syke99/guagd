@@ -8,10 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-
 	"guagd/internal/pkg/models"
 )
 
@@ -64,30 +60,30 @@ func (u *accountClient) signUp(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("signUp: email=%s username=%s acct_type=%s", payload.Email, payload.Username, payload.AcctType)
 
-	result, err := emailpassword.SignUp("public", payload.Email, payload.Password)
-	if err != nil || result.EmailAlreadyExistsError != nil {
+	userID, emailExists, err := u.auth.SignUp(payload.Email, payload.Password)
+	if err != nil || emailExists {
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
 		return
 	}
 
-	if err := u.createAccount(r.Context(), result.OK.User.ID, payload.Username, payload.Email, payload.AcctType); err != nil {
+	if err := u.createAccount(r.Context(), userID, payload.Username, payload.Email, payload.AcctType); err != nil {
 		log.Printf("signUp: db insert: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
 		return
 	}
 
-	info, err := u.getAccountBySupertokensID(r.Context(), result.OK.User.ID)
+	info, err := u.getAccountBySupertokensID(r.Context(), userID)
 	if err != nil {
 		log.Printf("signUp: get account: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
 		return
 	}
 
-	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, map[string]interface{}{
+	if err := u.auth.CreateSession(r, w, userID, map[string]any{
 		"account_id": info.AccountID,
 		"username":   payload.Username,
 		"acct_type":  payload.AcctType,
-	}, nil); err != nil {
+	}); err != nil {
 		log.Printf("signUp: create session: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
 		return
@@ -111,24 +107,24 @@ func (u *accountClient) signIn(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("signIn: email=%s", payload.Email)
 
-	result, err := emailpassword.SignIn("public", payload.Email, payload.Password)
-	if err != nil || result.WrongCredentialsError != nil {
+	userID, wrongCreds, err := u.auth.SignIn(payload.Email, payload.Password)
+	if err != nil || wrongCreds {
 		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
 		return
 	}
 
-	info, err := u.getAccountBySupertokensID(r.Context(), result.OK.User.ID)
+	info, err := u.getAccountBySupertokensID(r.Context(), userID)
 	if err != nil {
 		log.Printf("signIn: get account: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
 		return
 	}
 
-	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, map[string]interface{}{
+	if err := u.auth.CreateSession(r, w, userID, map[string]any{
 		"account_id": info.AccountID,
 		"username":   info.Username,
 		"acct_type":  info.AcctType,
-	}, nil); err != nil {
+	}); err != nil {
 		log.Printf("signIn: create session: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})
 		return
@@ -143,16 +139,10 @@ func (u *accountClient) signIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *accountClient) signOut(w http.ResponseWriter, r *http.Request) {
-	sessionRequired := false
-	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
-		SessionRequired: &sessionRequired,
-	})
-	if err == nil && sessionContainer != nil {
-		if err := sessionContainer.RevokeSession(); err != nil {
-			log.Printf("signOut: revoke session: %s", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
+	if err := u.auth.RevokeSession(r, w); err != nil {
+		log.Printf("signOut: revoke session: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +22,35 @@ func (m *mockDB) Query(_ context.Context, _ string, _ db.Results, _ ...any) erro
 func (m *mockDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return nil }
 
 var _ db.DB = (*mockDB)(nil)
+
+// mockAuth controls what each auth operation returns.
+type mockAuth struct {
+	signUpID        string
+	signUpEmail     bool
+	signUpErr       error
+	signInID        string
+	signInWrong     bool
+	signInErr       error
+	createSessionErr error
+	revokeErr       error
+}
+
+func (a *mockAuth) SignUp(_, _ string) (string, bool, error) {
+	return a.signUpID, a.signUpEmail, a.signUpErr
+}
+func (a *mockAuth) SignIn(_, _ string) (string, bool, error) {
+	return a.signInID, a.signInWrong, a.signInErr
+}
+func (a *mockAuth) CreateSession(_ *http.Request, _ http.ResponseWriter, _ string, _ map[string]any) error {
+	return a.createSessionErr
+}
+func (a *mockAuth) RevokeSession(_ *http.Request, _ http.ResponseWriter) error {
+	return a.revokeErr
+}
+
+func newClient(a *mockAuth) *accountClient {
+	return &accountClient{baseRoute: testBaseRoute, db: &mockDB{}, auth: a}
+}
 
 const testBaseRoute = "/accounts/"
 
@@ -47,8 +77,9 @@ func TestHandlers(t *testing.T) {
 func TestAddWaitlist(t *testing.T) {
 	t.Run("logs name and email and redirects to success", func(t *testing.T) {
 		var buf bytes.Buffer
+		orig := log.Writer()
 		log.SetOutput(&buf)
-		t.Cleanup(func() { log.SetOutput(nil) })
+		t.Cleanup(func() { log.SetOutput(orig) })
 
 		payload := models.UserRegisterPayload{Name: "Test User", Email: "test@example.com"}
 		body, _ := json.Marshal(payload)
@@ -178,5 +209,135 @@ func TestSearch_ValidQuery(t *testing.T) {
 	}
 	if ct := w.Header().Get("Content-Type"); ct != "text/html" {
 		t.Errorf("expected text/html, got %q", ct)
+	}
+}
+
+// ── signUp ────────────────────────────────────────────────────────────────────
+
+func signUpBody(t *testing.T, email, password, username, acctType string) *bytes.Reader {
+	t.Helper()
+	b, _ := json.Marshal(models.UserSignUpPayload{
+		Email: email, Password: password, Username: username, AcctType: acctType,
+	})
+	return bytes.NewReader(b)
+}
+
+func TestSignUp_InvalidBody(t *testing.T) {
+	c := newClient(&mockAuth{})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader("bad json"))
+	c.signUp(w, r)
+	if !strings.Contains(w.Header().Get("HX-Location"), "/signup/failure") {
+		t.Errorf("expected signup/failure redirect, got %q", w.Header().Get("HX-Location"))
+	}
+}
+
+func TestSignUp_InvalidAcctType(t *testing.T) {
+	c := newClient(&mockAuth{})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signup", signUpBody(t, "a@b.com", "pass", "alice", "admin"))
+	c.signUp(w, r)
+	if !strings.Contains(w.Header().Get("HX-Location"), "/signup/failure") {
+		t.Errorf("expected signup/failure redirect")
+	}
+}
+
+func TestSignUp_AuthError(t *testing.T) {
+	c := newClient(&mockAuth{signUpErr: errors.New("supertokens down")})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signup", signUpBody(t, "a@b.com", "pass", "alice", "driver"))
+	c.signUp(w, r)
+	if !strings.Contains(w.Header().Get("HX-Location"), "/signup/failure") {
+		t.Errorf("expected signup/failure redirect")
+	}
+}
+
+func TestSignUp_EmailExists(t *testing.T) {
+	c := newClient(&mockAuth{signUpEmail: true})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signup", signUpBody(t, "a@b.com", "pass", "alice", "driver"))
+	c.signUp(w, r)
+	if !strings.Contains(w.Header().Get("HX-Location"), "/signup/failure") {
+		t.Errorf("expected signup/failure redirect")
+	}
+}
+
+func TestSignUp_Success_Driver(t *testing.T) {
+	c := newClient(&mockAuth{signUpID: "uid-1"})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signup", signUpBody(t, "a@b.com", "pass", "alice", "driver"))
+	c.signUp(w, r)
+	if got := w.Header().Get("HX-Redirect"); got != "/garage/@alice" {
+		t.Errorf("expected /garage/@alice, got %q", got)
+	}
+}
+
+func TestSignUp_Success_Club(t *testing.T) {
+	c := newClient(&mockAuth{signUpID: "uid-2"})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signup", signUpBody(t, "a@b.com", "pass", "racers", "club"))
+	c.signUp(w, r)
+	if got := w.Header().Get("HX-Redirect"); got != "/hq/@racers" {
+		t.Errorf("expected /hq/@racers, got %q", got)
+	}
+}
+
+// ── signIn ────────────────────────────────────────────────────────────────────
+
+func signInBody(t *testing.T, email, password string) *bytes.Reader {
+	t.Helper()
+	b, _ := json.Marshal(models.UserSignInPayload{Email: email, Password: password})
+	return bytes.NewReader(b)
+}
+
+func TestSignIn_InvalidBody(t *testing.T) {
+	c := newClient(&mockAuth{})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signin", strings.NewReader("bad json"))
+	c.signIn(w, r)
+	if !strings.Contains(w.Header().Get("HX-Location"), "/signin/failure") {
+		t.Errorf("expected signin/failure redirect")
+	}
+}
+
+func TestSignIn_WrongCredentials(t *testing.T) {
+	c := newClient(&mockAuth{signInWrong: true})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signin", signInBody(t, "a@b.com", "wrong"))
+	c.signIn(w, r)
+	if !strings.Contains(w.Header().Get("HX-Location"), "/signin/failure") {
+		t.Errorf("expected signin/failure redirect")
+	}
+}
+
+func TestSignIn_Success_Driver(t *testing.T) {
+	c := newClient(&mockAuth{signInID: "uid-1"})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signin", signInBody(t, "a@b.com", "pass"))
+	c.signIn(w, r)
+	if got := w.Header().Get("HX-Redirect"); !strings.HasPrefix(got, "/garage/@") {
+		t.Errorf("expected /garage/@... redirect, got %q", got)
+	}
+}
+
+// ── signOut ───────────────────────────────────────────────────────────────────
+
+func TestSignOut_Success(t *testing.T) {
+	c := newClient(&mockAuth{})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signout", nil)
+	c.signOut(w, r)
+	if got := w.Header().Get("HX-Redirect"); got != "/" {
+		t.Errorf("expected / redirect, got %q", got)
+	}
+}
+
+func TestSignOut_RevokeError(t *testing.T) {
+	c := newClient(&mockAuth{revokeErr: errors.New("revoke failed")})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/signout", nil)
+	c.signOut(w, r)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
 	}
 }

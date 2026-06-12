@@ -1,15 +1,42 @@
 package client
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"guagd/internal/pkg/db"
+	"guagd/internal/pkg/sessions"
 )
+
+// ── mocks ─────────────────────────────────────────────────────────────────────
+
+type mockDB struct{}
+
+func (m *mockDB) Exec(_ context.Context, _ string, _ ...any) error                  { return nil }
+func (m *mockDB) Query(_ context.Context, _ string, _ db.Results, _ ...any) error   { return nil }
+func (m *mockDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return nil }
+
+type mockSession struct{ userID string }
+
+func (s *mockSession) GetUserID() string                             { return s.userID }
+func (s *mockSession) GetAccessTokenPayload() map[string]interface{} { return nil }
+func (s *mockSession) RevokeSession() error                          { return nil }
+
+type mockGetter struct{ sess sessions.Session }
+
+func (g *mockGetter) GetSession(_ *http.Request, _ http.ResponseWriter) (sessions.Session, error) {
+	return g.sess, nil
+}
+func (g *mockGetter) GetOptionalSession(_ *http.Request, _ http.ResponseWriter) (sessions.Session, error) {
+	return g.sess, nil
+}
 
 // bare client with no dependencies — sufficient for static-serving handlers
 func bare() *client {
-	return &client{baseRoute: "/"}
+	return &client{baseRoute: "/", db: &mockDB{}, sessions: &mockGetter{}}
 }
 
 // ── prefixRoute ───────────────────────────────────────────────────────────────
@@ -104,5 +131,84 @@ func TestAccessPage(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "localStorage") {
 		t.Errorf("expected localStorage script in response")
+	}
+}
+
+// ── trackVisit ────────────────────────────────────────────────────────────────
+
+func TestTrackVisit_BadReferer(t *testing.T) {
+	c := &client{
+		baseRoute: "/",
+		publicURL: "https://gaugd.com",
+		db:        &mockDB{},
+		sessions:  &mockGetter{},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/track/visit", nil)
+	r.Header.Set("Referer", "https://example.com/other")
+	c.trackVisit(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+func TestTrackVisit_NoCookie(t *testing.T) {
+	c := &client{
+		baseRoute: "/",
+		db:        &mockDB{},
+		sessions:  &mockGetter{},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/track/visit", nil)
+	c.trackVisit(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+func TestTrackVisit_NoSession(t *testing.T) {
+	c := &client{
+		baseRoute: "/",
+		db:        &mockDB{},
+		sessions:  &mockGetter{sess: nil},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/track/visit", nil)
+	r.AddCookie(&http.Cookie{Name: "visitor_id", Value: "test-visitor-123"})
+	c.trackVisit(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+func TestTrackVisit_WithSession(t *testing.T) {
+	c := &client{
+		baseRoute: "/",
+		db:        &mockDB{},
+		sessions:  &mockGetter{sess: &mockSession{userID: "user-abc"}},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/track/visit", nil)
+	r.AddCookie(&http.Cookie{Name: "visitor_id", Value: "test-visitor-456"})
+	c.trackVisit(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+func TestTrackVisit_MatchingReferer(t *testing.T) {
+	c := &client{
+		baseRoute: "/",
+		publicURL: "https://gaugd.com",
+		db:        &mockDB{},
+		sessions:  &mockGetter{},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/track/visit", nil)
+	r.Header.Set("Referer", "https://gaugd.com/garage/@alice")
+	r.AddCookie(&http.Cookie{Name: "visitor_id", Value: "test-visitor-789"})
+	c.trackVisit(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
 	}
 }

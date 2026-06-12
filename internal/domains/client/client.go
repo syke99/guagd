@@ -4,10 +4,15 @@ import (
 	"crypto/rand"
 	"embed"
 	"fmt"
+	"io/fs"
+	"log"
+	"net/http"
+	"time"
 
 	"guagd/internal/domains/client/pages/garage"
 	"guagd/internal/domains/client/pages/hq"
 	"guagd/internal/pkg/db"
+	"guagd/internal/pkg/middleware"
 	"guagd/internal/pkg/sessions"
 	"guagd/internal/pkg/storage"
 )
@@ -25,18 +30,118 @@ type client struct {
 	baseRoute string
 	publicURL string
 	db        db.DB
+	sessions  sessions.Getter
 	garage    *garage.GarageClient
 	hq        *hq.HQClient
 }
 
 func NewClient(baseRoute string, publicURL string, db db.DB, store *storage.Client) *client {
+	sg := &sessions.SuperTokensGetter{}
 	return &client{
 		baseRoute: baseRoute,
 		publicURL: publicURL,
 		db:        db,
-		garage:    garage.NewGarageClient(db, store, &sessions.SuperTokensGetter{}),
-		hq:        hq.NewHQClient(db, store, &sessions.SuperTokensGetter{}),
+		sessions:  sg,
+		garage:    garage.NewGarageClient(db, store, sg),
+		hq:        hq.NewHQClient(db, store, sg),
 	}
+}
+
+func (c *client) Handlers() map[string]http.HandlerFunc {
+	sub, err := fs.Sub(landing, "pages/landing")
+	if err != nil {
+		log.Printf("error loading landing fs: %s", err)
+		return map[string]http.HandlerFunc{}
+	}
+
+	assetsSub, err := fs.Sub(assets, "assets")
+	if err != nil {
+		log.Printf("error loading assets fs: %s", err)
+		return map[string]http.HandlerFunc{}
+	}
+
+	appSub, err := fs.Sub(app, "app")
+	if err != nil {
+		log.Printf("error loading app fs: %s", err)
+		return map[string]http.HandlerFunc{}
+	}
+
+	fileServer := http.FileServer(http.FS(sub))
+	assetsServer := http.FileServer(http.FS(assetsSub))
+	appServer := http.FileServer(http.FS(appSub))
+	landingRoute := prefixRoute(c.baseRoute, "pages/landing/")
+	assetsRoute := prefixRoute(c.baseRoute, "assets/")
+	appRoute := prefixRoute(c.baseRoute, "app/")
+
+	routes := map[string]http.HandlerFunc{
+		"/": func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFileFS(w, r, app, "app/index.html")
+		},
+		appRoute: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix(appRoute, appServer).ServeHTTP(w, r)
+		},
+		landingRoute: func(w http.ResponseWriter, r *http.Request) {
+			if _, err := r.Cookie("visitor_id"); err != nil {
+				http.SetCookie(w, &http.Cookie{
+					Name:     "visitor_id",
+					Value:    newVisitorID(),
+					Path:     "/",
+					Expires:  time.Now().Add(365 * 24 * time.Hour),
+					HttpOnly: false,
+					SameSite: http.SameSiteLaxMode,
+				})
+			}
+			http.StripPrefix(landingRoute, fileServer).ServeHTTP(w, r)
+		},
+		assetsRoute: func(w http.ResponseWriter, r *http.Request) {
+			http.StripPrefix(assetsRoute, assetsServer).ServeHTTP(w, r)
+		},
+		prefixRoute(c.baseRoute, "waitlist"):         c.waitlist,
+		prefixRoute(c.baseRoute, "waitlist/success"): c.waitlistSuccess,
+		prefixRoute(c.baseRoute, "waitlist/failure"): c.waitlistFailure,
+		prefixRoute(c.baseRoute, "signup"):           c.signupPage,
+		prefixRoute(c.baseRoute, "signup/failure"):   c.signupFailure,
+		prefixRoute(c.baseRoute, "signin"):           c.signinPage,
+		prefixRoute(c.baseRoute, "signin/failure"):   c.signinFailure,
+		prefixRoute(c.baseRoute, "track/visit"):      c.trackVisit,
+		prefixRoute(c.baseRoute, "access"):           c.accessPage,
+		"/garage/{username}": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("HX-Request") != "true" {
+				http.ServeFileFS(w, r, app, "app/index.html")
+				return
+			}
+			c.garage.GaragePage(w, r)
+		},
+		"/api/v1/garage/layout":                      middleware.RequireAuth(c.garage.SaveLayout),
+		"/api/v1/garage/theme":                        middleware.RequireAuth(c.garage.SaveTheme),
+		"/api/v1/garage/cover":                        middleware.RequireAuth(c.garage.SaveCoverPhoto),
+		"DELETE /api/v1/garage/cover":                 middleware.RequireAuth(c.garage.RemoveCoverPhoto),
+		"/api/v1/garage/avatar":                       middleware.RequireAuth(c.garage.SaveAvatar),
+		"DELETE /api/v1/garage/avatar":                middleware.RequireAuth(c.garage.RemoveAvatar),
+		"/api/v1/garage/cars/add":                     middleware.RequireAuth(c.garage.AddCar),
+		"/api/v1/garage/cars/remove":                  middleware.RequireAuth(c.garage.RemoveCar),
+		"/api/v1/garage/cars/photos":                  c.garage.GetCarPhotos,
+		"/api/v1/garage/cars/photos/add":              middleware.RequireAuth(c.garage.AddCarPhoto),
+		"/api/v1/garage/cars/photos/remove":           middleware.RequireAuth(c.garage.RemoveCarPhoto),
+		"/api/v1/garage/cars/photos/primary":          middleware.RequireAuth(c.garage.SetCarPhotoPrimary),
+		"/api/v1/hq/layout":                           middleware.RequireAuth(c.hq.SaveLayout),
+		"/api/v1/hq/theme":                            middleware.RequireAuth(c.hq.SaveTheme),
+		"/api/v1/hq/cover":                            middleware.RequireAuth(c.hq.SaveCoverPhoto),
+		"DELETE /api/v1/hq/cover":                     middleware.RequireAuth(c.hq.RemoveCoverPhoto),
+		"/api/v1/hq/members":                          c.hq.ListMembers,
+		"/api/v1/hq/members/add":                      c.hq.AddMember,
+		"/api/v1/hq/members/remove":                   c.hq.RemoveMember,
+		"/api/v1/hq/members/search":                   c.hq.SearchMembers,
+		"/hq/{username}": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("HX-Request") != "true" {
+				http.ServeFileFS(w, r, app, "app/index.html")
+				return
+			}
+			c.hq.HQPage(w, r)
+		},
+	}
+
+	return routes
 }
 
 func newVisitorID() string {
