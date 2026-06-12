@@ -20,6 +20,10 @@ type Config struct {
 	// Auth
 	SuperTokensCoreURL string `json:"SUPERTOKENS_CORE_URL"  yaml:"SUPERTOKENS_CORE_URL"  env:"SUPERTOKENS_CORE_URL"`
 	SuperTokensAPIKey  string `json:"SUPERTOKENS_API_KEY" yaml:"SUPERTOKENS_API_KEY" env:"SUPERTOKENS_API_KEY"`
+	// Hero carousel IDs
+	HeroBuildID  string `json:"HERO_BUILD_ID"  yaml:"HERO_BUILD_ID"  env:"HERO_BUILD_ID"`
+	HeroGarageID string `json:"HERO_GARAGE_ID" yaml:"HERO_GARAGE_ID" env:"HERO_GARAGE_ID"`
+	HeroClubID   string `json:"HERO_CLUB_ID"   yaml:"HERO_CLUB_ID"   env:"HERO_CLUB_ID"`
 	// Object Storage
 	R2AccountID                    string `json:"R2_ACCOUNT_ID"                     yaml:"R2_ACCOUNT_ID"                     env:"R2_ACCOUNT_ID"`
 	R2AccessKeyID                  string `json:"R2_ACCESS_KEY_ID"                  yaml:"R2_ACCESS_KEY_ID"                  env:"R2_ACCESS_KEY_ID"`

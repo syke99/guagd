@@ -11,6 +11,7 @@ import (
 
 	"guagd/internal/domains/client/pages/garage"
 	"guagd/internal/domains/client/pages/hq"
+	landingpkg "guagd/internal/domains/client/pages/landing"
 	"guagd/internal/pkg/db"
 	"guagd/internal/pkg/middleware"
 	"guagd/internal/pkg/sessions"
@@ -33,10 +34,15 @@ type client struct {
 	sessions  sessions.Getter
 	garage    *garage.GarageClient
 	hq        *hq.HQClient
+	landing   *landingpkg.LandingClient
 }
 
-func NewClient(baseRoute string, publicURL string, db db.DB, store *storage.Client) *client {
+func NewClient(baseRoute, publicURL string, db db.DB, store *storage.Client, heroBuildID, heroGarageID, heroClubID string) *client {
 	sg := &sessions.SuperTokensGetter{}
+	lc, err := landingpkg.NewLandingClient(db, store, publicURL, heroBuildID, heroGarageID, heroClubID)
+	if err != nil {
+		log.Printf("landing client init: %s", err)
+	}
 	return &client{
 		baseRoute: baseRoute,
 		publicURL: publicURL,
@@ -44,6 +50,7 @@ func NewClient(baseRoute string, publicURL string, db db.DB, store *storage.Clie
 		sessions:  sg,
 		garage:    garage.NewGarageClient(db, store, sg),
 		hq:        hq.NewHQClient(db, store, sg),
+		landing:   lc,
 	}
 }
 
@@ -95,6 +102,13 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		},
 		assetsRoute: func(w http.ResponseWriter, r *http.Request) {
 			http.StripPrefix(assetsRoute, assetsServer).ServeHTTP(w, r)
+		},
+		"/pages/landing/landing.html": func(w http.ResponseWriter, r *http.Request) {
+			if c.landing != nil {
+				c.landing.LandingPage(w, r)
+				return
+			}
+			http.ServeFileFS(w, r, landing, "pages/landing/landing.html")
 		},
 		prefixRoute(c.baseRoute, "waitlist"):         c.waitlist,
 		prefixRoute(c.baseRoute, "waitlist/success"): c.waitlistSuccess,

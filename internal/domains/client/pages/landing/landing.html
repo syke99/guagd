@@ -39,6 +39,41 @@
 
         <!-- SLIDE 1: Build Card -->
         <div class="carousel-slide">
+          {{if .Build}}
+          <div class="build-card">
+            <div class="card-cover" style="position:relative;">
+              {{if .Build.CoverPhotoURL}}
+              <img src="{{.Build.CoverPhotoURL}}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+              {{else}}
+              <div class="card-cover-inner">
+                <div class="card-cover-icon">📷</div>
+                <div class="card-cover-label">Cover Photo</div>
+              </div>
+              {{end}}
+            </div>
+            <div class="card-body">
+              <div class="build-card-header">
+                <div>
+                  <div class="build-car-name">{{.Build.CarName}}</div>
+                </div>
+              </div>
+              <div class="build-url">
+                <span>{{.Build.ShareURL}}</span>
+                <button class="copy-btn" onclick="copyHeroLink(this,'{{.Build.ShareURL}}')">Copy</button>
+              </div>
+            </div>
+            <div class="photo-strip">
+              {{range .Build.Photos}}
+              <div class="photo-thumb" style="position:relative;overflow:hidden;">
+                <img src="{{.}}" alt="" class="photo-thumb-img">
+              </div>
+              {{end}}
+              {{if .Build.ExtraPhotos}}
+              <div class="photo-thumb-more">+{{.Build.ExtraPhotos}}<small>photos</small></div>
+              {{end}}
+            </div>
+          </div>
+          {{else}}
           <div class="build-card">
             <div class="card-cover">
               <div class="card-cover-inner">
@@ -81,66 +116,111 @@
               <div class="photo-thumb-more">+9<small>photos</small></div>
             </div>
           </div>
+          {{end}}
         </div>
 
         <!-- SLIDE 2: Garage -->
         <div class="carousel-slide">
+          {{if .Garage}}
           <div class="panel-card">
-            <div class="panel-header">
-              <div class="panel-header-left">
-                <div class="panel-avatar">👤</div>
+            <div class="garage-profile" style="height:140px;border-radius:0;">
+              {{if .Garage.CoverPhotoURL}}<img class="profile-cover-img" style="border-radius:0;" src="{{.Garage.CoverPhotoURL}}" alt="">{{end}}
+              <div class="garage-profile-tab">
+                <div class="panel-avatar-wrap">
+                  <div class="panel-avatar">
+                    {{if .Garage.AvatarURL}}<img src="{{.Garage.AvatarURL}}" alt="">{{else}}👤{{end}}
+                  </div>
+                </div>
                 <div>
-                  <div class="panel-title">John's Garage</div>
-                  <div class="panel-sub">@jdm_john · Member since 2023</div>
+                  <div class="panel-title">@{{.Garage.Username}}'s Garage</div>
+                  <div class="panel-sub">@{{.Garage.Username}} · {{.Garage.CarCount}} {{if eq .Garage.CarCount 1}}vehicle{{else}}vehicles{{end}}</div>
                 </div>
               </div>
-              <div class="panel-stat"><strong>4</strong> vehicles</div>
+            </div>
+            <div class="panel-grid">
+              {{range .Garage.Cars}}
+              <button class="grid-btn">
+                <div class="grid-btn-thumb" style="{{if .ThumbURL}}background-image:url('{{.ThumbURL}}');background-size:cover;background-position:center;{{end}}"></div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">{{.Name}}</div>
+                </div>
+              </button>
+              {{end}}
+            </div>
+          </div>
+          {{else}}
+          <div class="panel-card">
+            <div class="garage-profile" style="height:140px;border-radius:0;">
+              <div class="garage-profile-tab">
+                <div class="panel-avatar-wrap">
+                  <div class="panel-avatar">👤</div>
+                </div>
+                <div>
+                  <div class="panel-title">John's Garage</div>
+                  <div class="panel-sub">@jdm_john · 4 vehicles</div>
+                </div>
+              </div>
             </div>
             <div class="panel-grid">
               <button class="grid-btn">
                 <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">2019 Subaru WRX STI</div>
-                  <div class="grid-btn-meta">9 mods · 4 verified</div>
-                </div>
+                <div class="grid-btn-info"><div class="grid-btn-name">2019 Subaru WRX STI</div></div>
               </button>
               <button class="grid-btn">
                 <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">2003 Nissan 350Z</div>
-                  <div class="grid-btn-meta">14 mods · 2 verified</div>
-                </div>
+                <div class="grid-btn-info"><div class="grid-btn-name">2003 Nissan 350Z</div></div>
               </button>
               <button class="grid-btn">
                 <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">2015 Ford Mustang GT</div>
-                  <div class="grid-btn-meta">6 mods · 6 verified</div>
-                </div>
+                <div class="grid-btn-info"><div class="grid-btn-name">2015 Ford Mustang GT</div></div>
               </button>
               <button class="grid-btn">
                 <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">1994 Toyota Supra</div>
-                  <div class="grid-btn-meta">22 mods · 0 verified</div>
-                </div>
+                <div class="grid-btn-info"><div class="grid-btn-name">1994 Toyota Supra</div></div>
               </button>
             </div>
           </div>
+          {{end}}
         </div>
 
         <!-- SLIDE 3: Team -->
         <div class="carousel-slide">
+          {{if .Club}}
           <div class="panel-card">
-            <div class="panel-header">
-              <div class="panel-header-left">
+            <div class="hq-profile" style="height:140px;border-radius:0;">
+              {{if .Club.CoverPhotoURL}}<img class="profile-cover-img" style="border-radius:0;" src="{{.Club.CoverPhotoURL}}" alt="">{{end}}
+              <div class="hq-profile-tab">
+                <div class="panel-avatar">🏁</div>
+                <div>
+                  <div class="panel-title">@{{.Club.Username}}'s Club HQ</div>
+                  <div class="panel-sub">@{{.Club.Username}} · {{.Club.MemberCount}} members</div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-grid">
+              {{range .Club.Members}}
+              <button class="grid-btn">
+                <div class="grid-btn-thumb-avatar">
+                  {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" style="width:100%;height:100%;object-fit:cover;">{{else}}👤{{end}}
+                </div>
+                <div class="grid-btn-info">
+                  <div class="grid-btn-name">@{{.Username}}</div>
+                  <div class="grid-btn-meta">{{.CarCount}} vehicles</div>
+                </div>
+              </button>
+              {{end}}
+            </div>
+          </div>
+          {{else}}
+          <div class="panel-card">
+            <div class="hq-profile" style="height:140px;border-radius:0;">
+              <div class="hq-profile-tab">
                 <div class="panel-avatar">🏁</div>
                 <div>
                   <div class="panel-title">Pacific NW Builds</div>
-                  <div class="panel-sub">Seattle, WA · Est. 2021</div>
+                  <div class="panel-sub">@pnw_builds · 12 members</div>
                 </div>
               </div>
-              <div class="panel-stat"><strong>12</strong> members</div>
             </div>
             <div class="panel-grid">
               <button class="grid-btn">
@@ -173,6 +253,7 @@
               </button>
             </div>
           </div>
+          {{end}}
         </div>
 
       </div><!-- end track -->
@@ -301,6 +382,13 @@
 </footer>
 
 <script>
+  function copyHeroLink(btn, url) {
+    navigator.clipboard.writeText(url).catch(function() {});
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  }
+
   if (localStorage.getItem('gaugd_early_access') === 'true') {
     document.getElementById('early-access-signup').style.display = '';
   }

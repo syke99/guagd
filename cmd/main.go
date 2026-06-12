@@ -71,7 +71,7 @@ func main() {
 
 			auth.Init(cfg.SuperTokensCoreURL, cfg.PublicURL, cfg.SuperTokensAPIKey)
 
-			clientDomain := client.NewClient("/", cfg.PublicURL, database, store)
+			clientDomain := client.NewClient("/", cfg.PublicURL, database, store, cfg.HeroBuildID, cfg.HeroGarageID, cfg.HeroClubID)
 			accountClient := account.NewAccountClient("/api/v1/accounts/", database)
 			uploadClient := upload.NewUploadClient(store)
 
