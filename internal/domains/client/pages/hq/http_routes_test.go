@@ -13,6 +13,7 @@ import (
 	"guagd/internal/pkg/db"
 	"guagd/internal/pkg/middleware"
 	"guagd/internal/pkg/sessions"
+	"guagd/internal/pkg/storage"
 )
 
 // ── mocks ─────────────────────────────────────────────────────────────────────
@@ -22,6 +23,12 @@ type mockDB struct{}
 func (m *mockDB) Exec(_ context.Context, _ string, _ ...any) error                  { return nil }
 func (m *mockDB) Query(_ context.Context, _ string, _ db.Results, _ ...any) error   { return nil }
 func (m *mockDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return nil }
+
+type errDB struct{}
+
+func (m *errDB) Exec(_ context.Context, _ string, _ ...any) error                  { return errors.New("db error") }
+func (m *errDB) Query(_ context.Context, _ string, _ db.Results, _ ...any) error   { return errors.New("db error") }
+func (m *errDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return errors.New("db error") }
 
 type mockSession struct {
 	userID  string
@@ -45,7 +52,11 @@ func (g *mockGetter) GetOptionalSession(_ *http.Request, _ http.ResponseWriter) 
 }
 
 func newClient(sg sessions.Getter) *HQClient {
-	return &HQClient{db: &mockDB{}, sessions: sg}
+	store, _ := storage.New(storage.Config{
+		AccountID: "fake", AccessKeyID: "fake", SecretAccessKey: "fake",
+		AccountPhotos: storage.BucketConfig{Name: "accounts", PublicURL: "https://accounts.example.com"},
+	})
+	return &HQClient{db: &mockDB{}, sessions: sg, storage: store}
 }
 
 func withAccountID(r *http.Request, id string) *http.Request {
@@ -277,5 +288,105 @@ func TestHQSaveCoverPhoto_NoAccount(t *testing.T) {
 	newClient(nil).SaveCoverPhoto(w, r)
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestHQSaveCoverPhoto_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := withAccountID(httptest.NewRequest(http.MethodPost, "/api/v1/hq/cover", strings.NewReader(`{"object_key":"cover.jpg"}`)), "acct-1")
+	newClient(nil).SaveCoverPhoto(w, r)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	var resp map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("response not JSON: %v", err)
+	}
+	if resp["url"] == "" {
+		t.Errorf("expected non-empty url in response")
+	}
+}
+
+// ── SaveTheme ─────────────────────────────────────────────────────────────────
+
+func TestHQSaveTheme_BadJSON(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/hq/theme", strings.NewReader("bad"))
+	newClient(nil).SaveTheme(w, r)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHQSaveTheme_NoAccount(t *testing.T) {
+	body, _ := json.Marshal(map[string]map[string]string{"global": {"--accent": "#e85d04"}})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/hq/theme", bytes.NewReader(body))
+	newClient(nil).SaveTheme(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestHQSaveTheme_Valid(t *testing.T) {
+	body, _ := json.Marshal(map[string]map[string]string{"global": {"--accent": "#e85d04"}})
+	w := httptest.NewRecorder()
+	r := withAccountID(httptest.NewRequest(http.MethodPost, "/api/v1/hq/theme", bytes.NewReader(body)), "acct-1")
+	newClient(nil).SaveTheme(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+// ── RemoveCoverPhoto ──────────────────────────────────────────────────────────
+
+func TestHQRemoveCoverPhoto_NoAccount(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodDelete, "/api/v1/hq/cover", nil)
+	newClient(nil).RemoveCoverPhoto(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestHQRemoveCoverPhoto_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := withAccountID(httptest.NewRequest(http.MethodDelete, "/api/v1/hq/cover", nil), "acct-1")
+	newClient(nil).RemoveCoverPhoto(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+// ── ListMembers ───────────────────────────────────────────────────────────────
+
+func TestListMembers_MissingUsername(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/hq/members", nil)
+	newClient(nil).ListMembers(w, r)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestListMembers_NotFound(t *testing.T) {
+	c := &HQClient{db: &errDB{}, sessions: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/hq/members?username=nobody", nil)
+	c.ListMembers(w, r)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestListMembers_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/hq/members?username=myclub", nil)
+	newClient(nil).ListMembers(w, r)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("expected application/json, got %q", ct)
 	}
 }

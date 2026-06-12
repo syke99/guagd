@@ -14,6 +14,7 @@ import (
 	"guagd/internal/pkg/middleware"
 	"guagd/internal/pkg/models"
 	"guagd/internal/pkg/sessions"
+	"guagd/internal/pkg/storage"
 )
 
 // ── mocks ─────────────────────────────────────────────────────────────────────
@@ -46,7 +47,12 @@ func (g *mockGetter) GetOptionalSession(_ *http.Request, _ http.ResponseWriter) 
 }
 
 func newClient() *GarageClient {
-	return &GarageClient{db: &mockDB{}, sessions: &mockGetter{}}
+	store, _ := storage.New(storage.Config{
+		AccountID: "fake", AccessKeyID: "fake", SecretAccessKey: "fake",
+		CarPhotos:     storage.BucketConfig{Name: "cars", PublicURL: "https://cars.example.com"},
+		AccountPhotos: storage.BucketConfig{Name: "accounts", PublicURL: "https://accounts.example.com"},
+	})
+	return &GarageClient{db: &mockDB{}, sessions: &mockGetter{}, storage: store}
 }
 
 func withAccountID(r *http.Request, id string) *http.Request {
@@ -300,5 +306,140 @@ func TestGaragePage_SessionError(t *testing.T) {
 	// error from GetOptionalSession is silently ignored; page still renders
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+// ── SetCarPhotoPrimary ────────────────────────────────────────────────────────
+
+func TestSetCarPhotoPrimary_MissingParams(t *testing.T) {
+	cases := []string{
+		"/api/v1/garage/cars/photos/primary",
+		"/api/v1/garage/cars/photos/primary?car_id=c1",
+		"/api/v1/garage/cars/photos/primary?photo_id=p1",
+	}
+	for _, url := range cases {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPost, url, nil)
+		newClient().SetCarPhotoPrimary(w, r)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("url %q: expected 400, got %d", url, w.Code)
+		}
+	}
+}
+
+func TestSetCarPhotoPrimary_NoAccountInContext(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/garage/cars/photos/primary?car_id=c1&photo_id=p1", nil)
+	newClient().SetCarPhotoPrimary(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+// ── RemoveAvatar ──────────────────────────────────────────────────────────────
+
+func TestRemoveAvatar_NoAccountInContext(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodDelete, "/api/v1/garage/avatar", nil)
+	newClient().RemoveAvatar(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestRemoveAvatar_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := withAccountID(httptest.NewRequest(http.MethodDelete, "/api/v1/garage/avatar", nil), "acct-1")
+	newClient().RemoveAvatar(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+// ── RemoveCoverPhoto ──────────────────────────────────────────────────────────
+
+func TestRemoveCoverPhoto_NoAccountInContext(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodDelete, "/api/v1/garage/cover", nil)
+	newClient().RemoveCoverPhoto(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestRemoveCoverPhoto_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := withAccountID(httptest.NewRequest(http.MethodDelete, "/api/v1/garage/cover", nil), "acct-1")
+	newClient().RemoveCoverPhoto(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+// ── GetCarPhotos valid path ───────────────────────────────────────────────────
+
+func TestGetCarPhotos_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/garage/cars/photos?car_id=c1", nil)
+	newClient().GetCarPhotos(w, r)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("expected application/json, got %q", ct)
+	}
+}
+
+// ── SaveAvatar valid path ─────────────────────────────────────────────────────
+
+func TestSaveAvatar_NoAccountInContext(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/garage/avatar", strings.NewReader(`{"object_key":"avatar.jpg"}`))
+	newClient().SaveAvatar(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestSaveAvatar_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := withAccountID(httptest.NewRequest(http.MethodPost, "/api/v1/garage/avatar", strings.NewReader(`{"object_key":"avatar.jpg"}`)), "acct-1")
+	newClient().SaveAvatar(w, r)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	var resp map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("response not JSON: %v", err)
+	}
+	if resp["url"] == "" {
+		t.Errorf("expected non-empty url in response")
+	}
+}
+
+// ── SaveCoverPhoto valid path ─────────────────────────────────────────────────
+
+func TestSaveCoverPhoto_NoAccountInContext(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/garage/cover", strings.NewReader(`{"object_key":"cover.jpg"}`))
+	newClient().SaveCoverPhoto(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestSaveCoverPhoto_Valid(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := withAccountID(httptest.NewRequest(http.MethodPost, "/api/v1/garage/cover", strings.NewReader(`{"object_key":"cover.jpg"}`)), "acct-1")
+	newClient().SaveCoverPhoto(w, r)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	var resp map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("response not JSON: %v", err)
+	}
+	if resp["url"] == "" {
+		t.Errorf("expected non-empty url in response")
 	}
 }

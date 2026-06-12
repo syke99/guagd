@@ -125,3 +125,58 @@ func TestRedirect(t *testing.T) {
 		}
 	})
 }
+
+func TestSearchPageURL(t *testing.T) {
+	cases := []struct{ acctType, want string }{
+		{"driver", "/garage/@alice"},
+		{"club", "/hq/@alice"},
+		{"shop", "/shop/@alice"},
+		{"unknown", "/garage/@alice"},
+		{"", "/garage/@alice"},
+	}
+	for _, c := range cases {
+		got := searchPageURL("alice", c.acctType)
+		if got != c.want {
+			t.Errorf("searchPageURL(%q) = %q, want %q", c.acctType, got, c.want)
+		}
+	}
+}
+
+func TestSearchPageLabel(t *testing.T) {
+	cases := []struct{ acctType, want string }{
+		{"driver", "Garage"},
+		{"club", "HQ"},
+		{"shop", "Shop"},
+		{"unknown", "Garage"},
+		{"", "Garage"},
+	}
+	for _, c := range cases {
+		got := searchPageLabel(c.acctType)
+		if got != c.want {
+			t.Errorf("searchPageLabel(%q) = %q, want %q", c.acctType, got, c.want)
+		}
+	}
+}
+
+func TestSearch_EmptyQuery(t *testing.T) {
+	c := NewAccountClient(testBaseRoute, &mockDB{})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, testBaseRoute+"search?q=", nil)
+	c.search(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
+
+func TestSearch_ValidQuery(t *testing.T) {
+	c := NewAccountClient(testBaseRoute, &mockDB{})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, testBaseRoute+"search?q=alice", nil)
+	c.search(w, r)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "text/html" {
+		t.Errorf("expected text/html, got %q", ct)
+	}
+}
