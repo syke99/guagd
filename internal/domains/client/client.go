@@ -34,7 +34,7 @@ func NewClient(baseRoute string, publicURL string, db db.DB, store *storage.Clie
 		publicURL: publicURL,
 		db:        db,
 		garage:    garage.NewGarageClient(db, store),
-		hq:        hq.NewHQClient(db),
+		hq:        hq.NewHQClient(db, store),
 	}
 }
 

@@ -35,14 +35,14 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	isAuthenticated := sessionContainer != nil
 	isOwner := isAuthenticated && sessionContainer.GetUserID() == user.SupertokensID
 
-	layout, theme, coverPhotoURL, err := g.getGarageLayout(r.Context(), user.SupertokensID)
+	layout, theme, coverPhotoURL, err := g.getGarageLayout(r.Context(), user.AccountID)
 	if err != nil {
 		log.Printf("garagePage: get layout: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	cars, err := g.getCars(r.Context(), user.SupertokensID)
+	cars, err := g.getCars(r.Context(), user.AccountID)
 	if err != nil {
 		log.Printf("garagePage: get cars: %s", err)
 		cars = make([]models.Car, 0)
@@ -60,9 +60,15 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Cache-Control", "no-store")
 	if err := garageTemplate.ExecuteTemplate(w, "garage.html", data); err != nil {
 		log.Printf("garagePage: render: %s", err)
 	}
+}
+
+func accountID(r *http.Request) (string, bool) {
+	v, ok := r.Context().Value(middleware.ContextKeyAccountID).(string)
+	return v, ok && v != ""
 }
 
 func (g *GarageClient) SaveLayout(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +78,12 @@ func (g *GarageClient) SaveLayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	if err := g.upsertLayout(r.Context(), userID, layout); err != nil {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.upsertLayout(r.Context(), id, layout); err != nil {
 		log.Printf("saveLayout: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -89,8 +99,12 @@ func (g *GarageClient) SaveTheme(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	if err := g.upsertTheme(r.Context(), userID, theme); err != nil {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.upsertTheme(r.Context(), id, theme); err != nil {
 		log.Printf("saveTheme: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -110,8 +124,12 @@ func (g *GarageClient) AddCar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	car, err := g.addCar(r.Context(), userID, models.Car{
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	car, err := g.addCar(r.Context(), id, models.Car{
 		Year:    body.Year,
 		Make:    strings.TrimSpace(body.Make),
 		Model:   strings.TrimSpace(body.Model),
@@ -141,8 +159,12 @@ func (g *GarageClient) RemoveCar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	if err := g.removeCar(r.Context(), userID, body.ID); err != nil {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.removeCar(r.Context(), id, body.ID); err != nil {
 		log.Printf("removeCar: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -189,8 +211,12 @@ func (g *GarageClient) AddCarPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	photo, err := g.addCarPhoto(r.Context(), userID, carID, body.ObjectKey, body.IsPrimary)
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	photo, err := g.addCarPhoto(r.Context(), id, carID, body.ObjectKey, body.IsPrimary)
 	if err != nil {
 		log.Printf("addCarPhoto: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -209,8 +235,12 @@ func (g *GarageClient) RemoveCarPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	if err := g.removeCarPhoto(r.Context(), userID, photoID); err != nil {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.removeCarPhoto(r.Context(), id, photoID); err != nil {
 		log.Printf("removeCarPhoto: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -227,8 +257,12 @@ func (g *GarageClient) SetCarPhotoPrimary(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	if err := g.setCarPhotoPrimary(r.Context(), userID, carID, photoID); err != nil {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.setCarPhotoPrimary(r.Context(), id, carID, photoID); err != nil {
 		log.Printf("setCarPhotoPrimary: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -246,12 +280,31 @@ func (g *GarageClient) SaveCoverPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	if err := g.saveCoverPhoto(r.Context(), userID, body.ObjectKey); err != nil {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.saveCoverPhoto(r.Context(), id, body.ObjectKey); err != nil {
 		log.Printf("saveCoverPhoto: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"url": g.storage.AccountPhotoURL(body.ObjectKey)})
+}
+
+func (g *GarageClient) RemoveCoverPhoto(w http.ResponseWriter, r *http.Request) {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.removeCoverPhoto(r.Context(), id); err != nil {
+		log.Printf("removeCoverPhoto: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }

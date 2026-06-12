@@ -113,8 +113,7 @@ function toggleEdit() {
   } else {
     dropdown.style.display = 'flex';
     editBtn.classList.add('active');
-    editMode = 'edit';
-    if (currentModalCar) renderCarModal(currentModalCar);
+    applyMode('edit');
   }
 }
 
@@ -139,6 +138,11 @@ function applyMode(mode) {
     const panel = document.getElementById('add-car-panel');
     if (panel) panel.style.display = 'none';
   }
+
+  const coverEdit = document.getElementById('profile-cover-edit');
+  const coverRemove = document.getElementById('profile-cover-remove');
+  if (coverEdit) coverEdit.style.display = mode !== null ? 'flex' : 'none';
+  if (coverRemove) coverRemove.style.display = (mode !== null && !!document.getElementById('profile-cover-img')) ? 'flex' : 'none';
 
   if (currentModalCar) renderCarModal(currentModalCar);
 }
@@ -535,6 +539,49 @@ async function confirmCarCover(objectKey) {
   return res.json();
 }
 
+function openProfileCoverUpload() {
+  let resolvedURL = '';
+  openUploadModal({
+    entityType: 'account',
+    title: document.getElementById('profile-cover-img') ? 'Replace Cover Photo' : 'Add Cover Photo',
+    confirm: async (objectKey) => {
+      const res = await fetch('/api/v1/garage/cover', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({object_key: objectKey}),
+      });
+      if (!res.ok) throw new Error('Failed to save cover photo');
+      const data = await res.json();
+      resolvedURL = data.url;
+    },
+    onSuccess: () => {
+      let img = document.getElementById('profile-cover-img');
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'profile-cover-img';
+        img.className = 'profile-cover-img';
+        document.querySelector('.garage-profile').prepend(img);
+      }
+      img.src = resolvedURL;
+      const label = document.getElementById('profile-cover-label');
+      if (label) label.textContent = 'Replace Cover Photo';
+      const coverRemove = document.getElementById('profile-cover-remove');
+      if (coverRemove) coverRemove.style.display = 'flex';
+    },
+  });
+}
+
+async function removeProfileCover() {
+  const res = await fetch('/api/v1/garage/cover', {method: 'DELETE'});
+  if (!res.ok) return;
+  const img = document.getElementById('profile-cover-img');
+  if (img) img.remove();
+  const label = document.getElementById('profile-cover-label');
+  if (label) label.textContent = 'Add Cover Photo';
+  const coverRemove = document.getElementById('profile-cover-remove');
+  if (coverRemove) coverRemove.style.display = 'none';
+}
+
 function updateCarCover(carId, objectKey) {
   fetch('/api/v1/garage/cars/photos?car_id=' + carId)
     .then(r => r.ok ? r.json() : [])
@@ -616,6 +663,13 @@ function onCarPhotoAdded(carId, objectKey) {
 
 {{define "profile-header"}}
 <div class="garage-profile">
+  {{if .CoverPhotoURL}}<img id="profile-cover-img" class="profile-cover-img" src="{{.CoverPhotoURL}}">{{end}}
+  {{if .IsOwner}}
+  <div id="profile-cover-edit" class="profile-cover-edit-overlay" style="display:none" onclick="openProfileCoverUpload()">
+    📷 <span id="profile-cover-label">{{if .CoverPhotoURL}}Replace Cover Photo{{else}}Add Cover Photo{{end}}</span>
+  </div>
+  <button id="profile-cover-remove" class="profile-cover-remove-btn" style="display:none" onclick="removeProfileCover()">✕</button>
+  {{end}}
   <div class="garage-profile-tab">
     <div class="panel-avatar">👤</div>
     <div>

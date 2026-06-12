@@ -1,0 +1,1 @@
+ALTER TABLE hq_layouts ADD COLUMN IF NOT EXISTS cover_photo_key VARCHAR;

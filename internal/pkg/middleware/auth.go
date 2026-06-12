@@ -9,7 +9,10 @@ import (
 
 type contextKey string
 
-const ContextKeyUserID contextKey = "userID"
+const (
+	ContextKeyUserID    contextKey = "userID"
+	ContextKeyAccountID contextKey = "accountID"
+)
 
 func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -20,6 +23,11 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		ctx := context.WithValue(r.Context(), ContextKeyUserID, sessionContainer.GetUserID())
+		if payload := sessionContainer.GetAccessTokenPayload(); payload != nil {
+			if accountID, ok := payload["account_id"].(string); ok && accountID != "" {
+				ctx = context.WithValue(ctx, ContextKeyAccountID, accountID)
+			}
+		}
 		next(w, r.WithContext(ctx))
 	}
 }

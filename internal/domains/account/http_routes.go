@@ -76,9 +76,17 @@ func (u *accountClient) signUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	info, err := u.getAccountBySupertokensID(r.Context(), result.OK.User.ID)
+	if err != nil {
+		log.Printf("signUp: get account: %s", err)
+		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
+		return
+	}
+
 	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, map[string]interface{}{
-		"username":  payload.Username,
-		"acct_type": payload.AcctType,
+		"account_id": info.AccountID,
+		"username":   payload.Username,
+		"acct_type":  payload.AcctType,
 	}, nil); err != nil {
 		log.Printf("signUp: create session: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signup/failure", Target: "#signup-result"})
@@ -117,8 +125,9 @@ func (u *accountClient) signIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := session.CreateNewSession(r, w, "public", result.OK.User.ID, map[string]interface{}{
-		"username":  info.Username,
-		"acct_type": info.AcctType,
+		"account_id": info.AccountID,
+		"username":   info.Username,
+		"acct_type":  info.AcctType,
 	}, nil); err != nil {
 		log.Printf("signIn: create session: %s", err)
 		redirect(w, models.HTMXRedirectResponse{Path: "/signin/failure", Target: "#signin-result"})

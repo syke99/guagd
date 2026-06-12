@@ -18,6 +18,32 @@
 </div>
 
 {{if .IsOwner}}
+<div id="upload-modal" class="modal-overlay" style="display:none;z-index:600" onclick="if(event.target===this)closeUploadModal()">
+  <div class="upload-modal-inner">
+    <div class="upload-modal-header">
+      <div class="upload-modal-title" id="upload-modal-title">Add Photo</div>
+      <button class="modal-close-btn" onclick="closeUploadModal()">✕</button>
+    </div>
+    <div class="upload-drop-zone" id="upload-drop-zone">
+      <div class="upload-placeholder" id="upload-placeholder">
+        <div class="upload-icon">📷</div>
+        <div class="upload-placeholder-text">Drop a photo here or <span class="upload-link">browse</span></div>
+        <div class="upload-hint">JPEG, PNG, or WebP</div>
+      </div>
+      <div class="upload-preview" id="upload-preview" style="display:none">
+        <img id="upload-preview-img">
+      </div>
+    </div>
+    <input type="file" id="upload-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+    <div class="upload-actions">
+      <button class="btn-primary" id="upload-confirm-btn" disabled onclick="confirmUpload()">Upload Photo</button>
+    </div>
+    <div id="upload-status" class="upload-status"></div>
+  </div>
+</div>
+{{end}}
+
+{{if .IsOwner}}
 <div id="theme-editor" class="theme-editor">
   <div class="theme-editor-title">
     Style
@@ -72,6 +98,7 @@ function toggleEdit() {
   } else {
     dropdown.style.display = 'flex';
     editBtn.classList.add('active');
+    applyMode('edit');
   }
 }
 
@@ -96,6 +123,145 @@ function applyMode(mode) {
     const panel = document.getElementById('add-member-panel');
     if (panel) panel.style.display = 'none';
   }
+
+  const coverEdit = document.getElementById('profile-cover-edit');
+  const coverRemove = document.getElementById('profile-cover-remove');
+  if (coverEdit) coverEdit.style.display = mode !== null ? 'flex' : 'none';
+  if (coverRemove) coverRemove.style.display = (mode !== null && !!document.getElementById('profile-cover-img')) ? 'flex' : 'none';
+}
+
+// ── Upload modal ──────────────────────────────────────────────
+let uploadCtx = null;
+
+function openUploadModal(ctx) {
+  uploadCtx = ctx;
+  document.getElementById('upload-modal-title').textContent = ctx.title || 'Add Photo';
+  document.getElementById('upload-file-input').value = '';
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('upload-placeholder').style.display = 'flex';
+  document.getElementById('upload-status').textContent = '';
+  document.getElementById('upload-confirm-btn').disabled = true;
+  document.getElementById('upload-modal').style.display = 'flex';
+}
+
+function closeUploadModal() {
+  document.getElementById('upload-modal').style.display = 'none';
+  uploadCtx = null;
+}
+
+document.getElementById('upload-drop-zone').addEventListener('click', function() {
+  document.getElementById('upload-file-input').click();
+});
+
+document.getElementById('upload-drop-zone').addEventListener('dragover', function(e) {
+  e.preventDefault();
+  this.classList.add('drag-over');
+});
+document.getElementById('upload-drop-zone').addEventListener('dragleave', function() {
+  this.classList.remove('drag-over');
+});
+document.getElementById('upload-drop-zone').addEventListener('drop', function(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) previewFile(file);
+});
+
+document.getElementById('upload-file-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) previewFile(file);
+});
+
+function previewFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('upload-preview-img').src = ev.target.result;
+    document.getElementById('upload-preview').style.display = 'flex';
+    document.getElementById('upload-placeholder').style.display = 'none';
+    document.getElementById('upload-confirm-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function confirmUpload() {
+  const fileInput = document.getElementById('upload-file-input');
+  const file = fileInput.files[0];
+  if (!file || !uploadCtx) return;
+
+  const btn = document.getElementById('upload-confirm-btn');
+  const status = document.getElementById('upload-status');
+  btn.disabled = true;
+  status.textContent = 'Uploading…';
+
+  try {
+    const presignRes = await fetch('/api/v1/upload/presign', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({entity_type: uploadCtx.entityType, content_type: file.type}),
+    });
+    if (!presignRes.ok) throw new Error('Failed to get upload URL');
+    const {upload_url, object_key} = await presignRes.json();
+
+    const putRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: {'Content-Type': file.type},
+      body: file,
+    });
+    if (!putRes.ok) throw new Error('Upload to storage failed');
+
+    await uploadCtx.confirm(object_key);
+
+    const onSuccess = uploadCtx.onSuccess;
+    status.textContent = '';
+    closeUploadModal();
+    if (onSuccess) onSuccess(object_key);
+  } catch (err) {
+    status.textContent = err.message || 'Upload failed. Try again.';
+    btn.disabled = false;
+  }
+}
+
+function openProfileCoverUpload() {
+  let resolvedURL = '';
+  openUploadModal({
+    entityType: 'account',
+    title: document.getElementById('profile-cover-img') ? 'Replace Cover Photo' : 'Add Cover Photo',
+    confirm: async (objectKey) => {
+      const res = await fetch('/api/v1/hq/cover', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({object_key: objectKey}),
+      });
+      if (!res.ok) throw new Error('Failed to save cover photo');
+      const data = await res.json();
+      resolvedURL = data.url;
+    },
+    onSuccess: () => {
+      let img = document.getElementById('profile-cover-img');
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'profile-cover-img';
+        img.className = 'profile-cover-img';
+        document.querySelector('.hq-profile').prepend(img);
+      }
+      img.src = resolvedURL;
+      const label = document.getElementById('profile-cover-label');
+      if (label) label.textContent = 'Replace Cover Photo';
+      const coverRemove = document.getElementById('profile-cover-remove');
+      if (coverRemove) coverRemove.style.display = 'flex';
+    },
+  });
+}
+
+async function removeProfileCover() {
+  const res = await fetch('/api/v1/hq/cover', {method: 'DELETE'});
+  if (!res.ok) return;
+  const img = document.getElementById('profile-cover-img');
+  if (img) img.remove();
+  const label = document.getElementById('profile-cover-label');
+  if (label) label.textContent = 'Add Cover Photo';
+  const coverRemove = document.getElementById('profile-cover-remove');
+  if (coverRemove) coverRemove.style.display = 'none';
 }
 
 function toggleAddMember() {
@@ -303,6 +469,13 @@ function adjustMemberCount(delta) {
 
 {{define "hq-profile-header"}}
 <div class="hq-profile">
+  {{if .CoverPhotoURL}}<img id="profile-cover-img" class="profile-cover-img" src="{{.CoverPhotoURL}}">{{end}}
+  {{if .IsOwner}}
+  <div id="profile-cover-edit" class="profile-cover-edit-overlay" style="display:none" onclick="openProfileCoverUpload()">
+    📷 <span id="profile-cover-label">{{if .CoverPhotoURL}}Replace Cover Photo{{else}}Add Cover Photo{{end}}</span>
+  </div>
+  <button id="profile-cover-remove" class="profile-cover-remove-btn" style="display:none" onclick="removeProfileCover()">✕</button>
+  {{end}}
   <div class="hq-profile-tab">
     <div class="panel-avatar">🏁</div>
     <div>
@@ -338,7 +511,7 @@ function adjustMemberCount(delta) {
     <div class="member-card-wrap">
       <a class="member-card" href="/garage/@{{.Username}}">
         <div class="member-card-thumb">
-          <div class="member-card-avatar">👤</div>
+          {{if .CoverPhotoURL}}<img src="{{.CoverPhotoURL}}" style="width:100%;height:100%;object-fit:cover;border-radius:8px 8px 0 0">{{else}}<div class="member-card-avatar">👤</div>{{end}}
         </div>
         <div class="member-card-info">
           <div class="member-card-username">@{{.Username}}</div>

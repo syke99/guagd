@@ -69,7 +69,7 @@ func (u *accountClient) searchAccounts(ctx context.Context, q, acctType string) 
 func (u *accountClient) getAccountBySupertokensID(ctx context.Context, supertokensID string) (models.AccountInfo, error) {
 	var info models.AccountInfo
 	err := u.db.QueryRow(ctx,
-		"SELECT username, acct_type FROM accounts WHERE supertokens_id = $1",
+		"SELECT id::text, username, acct_type FROM accounts WHERE supertokens_id = $1",
 		db.WithResultOf(&info),
 		supertokensID,
 	)

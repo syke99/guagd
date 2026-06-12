@@ -42,7 +42,7 @@ func (g *GarageClient) getUserByUsername(ctx context.Context, username string) (
 	var user models.GarageUser
 	err := g.db.QueryRow(
 		ctx,
-		"SELECT supertokens_id, username FROM accounts WHERE username = $1",
+		"SELECT id::text AS account_id, supertokens_id, username FROM accounts WHERE username = $1",
 		db.WithResultOf(&user),
 		username,
 	)
@@ -52,19 +52,18 @@ func (g *GarageClient) getUserByUsername(ctx context.Context, username string) (
 	return &user, nil
 }
 
-func (g *GarageClient) getGarageLayout(ctx context.Context, supertokensID string) ([]models.LayoutItem, map[string]map[string]string, string, error) {
+func (g *GarageClient) getGarageLayout(ctx context.Context, accountID string) ([]models.LayoutItem, map[string]map[string]string, string, error) {
 	var layoutJSON, themeJSON string
-	var coverPhotoKey string
 	err := g.db.QueryRow(
 		ctx,
-		"SELECT layout::text, theme::text, COALESCE(cover_photo_key, '') FROM garage_layouts WHERE supertokens_id = $1",
+		"SELECT layout::text, theme::text FROM garage_layouts WHERE account_id = $1",
 		func(rows pgx.Rows) error {
 			if !rows.Next() {
 				return pgx.ErrNoRows
 			}
-			return rows.Scan(&layoutJSON, &themeJSON, &coverPhotoKey)
+			return rows.Scan(&layoutJSON, &themeJSON)
 		},
-		supertokensID,
+		accountID,
 	)
 	if err != nil {
 		return append([]models.LayoutItem{}, defaultLayout...), map[string]map[string]string{}, "", nil
@@ -80,45 +79,58 @@ func (g *GarageClient) getGarageLayout(ctx context.Context, supertokensID string
 		theme = map[string]map[string]string{}
 	}
 
+	var bannerKey string
+	_ = g.db.QueryRow(
+		ctx,
+		"SELECT COALESCE(banner_key, '') FROM account_photos WHERE account_id = $1",
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return nil
+			}
+			return rows.Scan(&bannerKey)
+		},
+		accountID,
+	)
+
 	coverPhotoURL := ""
-	if coverPhotoKey != "" {
-		coverPhotoURL = g.storage.AccountPhotoURL(coverPhotoKey)
+	if bannerKey != "" {
+		coverPhotoURL = g.storage.AccountPhotoURL(bannerKey)
 	}
 
 	return layout, theme, coverPhotoURL, nil
 }
 
-func (g *GarageClient) upsertLayout(ctx context.Context, supertokensID string, layout []models.LayoutItem) error {
+func (g *GarageClient) upsertLayout(ctx context.Context, accountID string, layout []models.LayoutItem) error {
 	b, err := json.Marshal(layout)
 	if err != nil {
 		return err
 	}
 	return g.db.Exec(
 		ctx,
-		`INSERT INTO garage_layouts (supertokens_id, layout)
+		`INSERT INTO garage_layouts (account_id, layout)
 		 VALUES ($1, $2::jsonb)
-		 ON CONFLICT (supertokens_id) DO UPDATE
+		 ON CONFLICT (account_id) DO UPDATE
 		 SET layout = EXCLUDED.layout`,
-		supertokensID, string(b),
+		accountID, string(b),
 	)
 }
 
-func (g *GarageClient) upsertTheme(ctx context.Context, supertokensID string, theme map[string]map[string]string) error {
+func (g *GarageClient) upsertTheme(ctx context.Context, accountID string, theme map[string]map[string]string) error {
 	b, err := json.Marshal(theme)
 	if err != nil {
 		return err
 	}
 	return g.db.Exec(
 		ctx,
-		`INSERT INTO garage_layouts (supertokens_id, theme)
+		`INSERT INTO garage_layouts (account_id, theme)
 		 VALUES ($1, $2::jsonb)
-		 ON CONFLICT (supertokens_id) DO UPDATE
+		 ON CONFLICT (account_id) DO UPDATE
 		 SET theme = EXCLUDED.theme`,
-		supertokensID, string(b),
+		accountID, string(b),
 	)
 }
 
-func (g *GarageClient) getCars(ctx context.Context, ownerID string) ([]models.Car, error) {
+func (g *GarageClient) getCars(ctx context.Context, accountID string) ([]models.Car, error) {
 	var cars []models.Car
 	err := g.db.Query(
 		ctx,
@@ -134,7 +146,7 @@ func (g *GarageClient) getCars(ctx context.Context, ownerID string) ([]models.Ca
 		 WHERE c.owner_id = $1
 		 ORDER BY c.created_at`,
 		db.WithResultsOf(&cars),
-		ownerID,
+		accountID,
 	)
 	for i := range cars {
 		if cars[i].ObjectKey != "" {
@@ -144,7 +156,7 @@ func (g *GarageClient) getCars(ctx context.Context, ownerID string) ([]models.Ca
 	return cars, err
 }
 
-func (g *GarageClient) addCar(ctx context.Context, ownerID string, car models.Car) (models.Car, error) {
+func (g *GarageClient) addCar(ctx context.Context, accountID string, car models.Car) (models.Car, error) {
 	var created models.Car
 	err := g.db.QueryRow(
 		ctx,
@@ -158,16 +170,16 @@ func (g *GarageClient) addCar(ctx context.Context, ownerID string, car models.Ca
 		           COALESCE(mileage, 0) AS mileage,
 		           ''                   AS object_key`,
 		db.WithResultOf(&created),
-		ownerID, car.Year, car.Make, car.Model, car.Trim, car.Mileage,
+		accountID, car.Year, car.Make, car.Model, car.Trim, car.Mileage,
 	)
 	return created, err
 }
 
-func (g *GarageClient) removeCar(ctx context.Context, ownerID, carID string) error {
+func (g *GarageClient) removeCar(ctx context.Context, accountID, carID string) error {
 	return g.db.Exec(
 		ctx,
 		`DELETE FROM cars WHERE id = $1 AND owner_id = $2`,
-		carID, ownerID,
+		carID, accountID,
 	)
 }
 
@@ -190,7 +202,7 @@ func (g *GarageClient) getCarPhotos(ctx context.Context, carID string) ([]models
 	return photos, err
 }
 
-func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKey string, isPrimary bool) (models.CarPhoto, error) {
+func (g *GarageClient) addCarPhoto(ctx context.Context, accountID, carID, objectKey string, isPrimary bool) (models.CarPhoto, error) {
 	var owned int
 	err := g.db.QueryRow(
 		ctx,
@@ -201,7 +213,7 @@ func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKe
 			}
 			return rows.Scan(&owned)
 		},
-		carID, ownerID,
+		carID, accountID,
 	)
 	if err != nil || owned == 0 {
 		return models.CarPhoto{}, fmt.Errorf("car not found")
@@ -226,7 +238,7 @@ func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKe
 	return photo, err
 }
 
-func (g *GarageClient) removeCarPhoto(ctx context.Context, ownerID, photoID string) error {
+func (g *GarageClient) removeCarPhoto(ctx context.Context, accountID, photoID string) error {
 	var objectKey string
 	err := g.db.QueryRow(
 		ctx,
@@ -242,7 +254,7 @@ func (g *GarageClient) removeCarPhoto(ctx context.Context, ownerID, photoID stri
 			}
 			return rows.Scan(&objectKey)
 		},
-		photoID, ownerID,
+		photoID, accountID,
 	)
 	if err != nil {
 		return err
@@ -255,7 +267,7 @@ func (g *GarageClient) removeCarPhoto(ctx context.Context, ownerID, photoID stri
 	return nil
 }
 
-func (g *GarageClient) setCarPhotoPrimary(ctx context.Context, ownerID, carID, photoID string) error {
+func (g *GarageClient) setCarPhotoPrimary(ctx context.Context, accountID, carID, photoID string) error {
 	var owned int
 	err := g.db.QueryRow(
 		ctx,
@@ -268,7 +280,7 @@ func (g *GarageClient) setCarPhotoPrimary(ctx context.Context, ownerID, carID, p
 			}
 			return rows.Scan(&owned)
 		},
-		photoID, carID, ownerID,
+		photoID, carID, accountID,
 	)
 	if err != nil || owned == 0 {
 		return fmt.Errorf("photo not found")
@@ -280,13 +292,21 @@ func (g *GarageClient) setCarPhotoPrimary(ctx context.Context, ownerID, carID, p
 	return g.db.Exec(ctx, `UPDATE car_photos SET is_primary = true WHERE id = $1`, photoID)
 }
 
-func (g *GarageClient) saveCoverPhoto(ctx context.Context, ownerID, objectKey string) error {
+func (g *GarageClient) saveCoverPhoto(ctx context.Context, accountID, objectKey string) error {
 	return g.db.Exec(
 		ctx,
-		`INSERT INTO garage_layouts (supertokens_id, cover_photo_key)
-		 VALUES ($1, $2)
-		 ON CONFLICT (supertokens_id) DO UPDATE
-		 SET cover_photo_key = EXCLUDED.cover_photo_key`,
-		ownerID, objectKey,
+		`INSERT INTO account_photos (account_id, banner_key, updated_at)
+		 VALUES ($1, $2, now())
+		 ON CONFLICT (account_id) DO UPDATE
+		 SET banner_key = EXCLUDED.banner_key, updated_at = now()`,
+		accountID, objectKey,
+	)
+}
+
+func (g *GarageClient) removeCoverPhoto(ctx context.Context, accountID string) error {
+	return g.db.Exec(
+		ctx,
+		`UPDATE account_photos SET banner_key = NULL, updated_at = now() WHERE account_id = $1`,
+		accountID,
 	)
 }
