@@ -35,7 +35,7 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	isAuthenticated := sessionContainer != nil
 	isOwner := isAuthenticated && sessionContainer.GetUserID() == user.SupertokensID
 
-	layout, theme, coverPhotoURL, err := g.getGarageLayout(r.Context(), user.AccountID)
+	layout, theme, coverPhotoURL, avatarURL, err := g.getGarageLayout(r.Context(), user.AccountID)
 	if err != nil {
 		log.Printf("garagePage: get layout: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -57,6 +57,7 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 		Layout:          layout,
 		SafeCSS:         css.BuildTheme(theme),
 		CoverPhotoURL:   coverPhotoURL,
+		AvatarURL:       avatarURL,
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -268,6 +269,44 @@ func (g *GarageClient) SetCarPhotoPrimary(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (g *GarageClient) SaveAvatar(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ObjectKey string `json:"object_key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.ObjectKey) == "" {
+		http.Error(w, "object_key required", http.StatusBadRequest)
+		return
+	}
+
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.saveAvatar(r.Context(), id, body.ObjectKey); err != nil {
+		log.Printf("saveAvatar: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"url": g.storage.AccountPhotoURL(body.ObjectKey)})
+}
+
+func (g *GarageClient) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.removeAvatar(r.Context(), id); err != nil {
+		log.Printf("removeAvatar: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 

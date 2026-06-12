@@ -144,6 +144,11 @@ function applyMode(mode) {
   if (coverEdit) coverEdit.style.display = mode !== null ? 'flex' : 'none';
   if (coverRemove) coverRemove.style.display = (mode !== null && !!document.getElementById('profile-cover-img')) ? 'flex' : 'none';
 
+  const avatarEdit = document.getElementById('profile-avatar-edit');
+  const avatarRemove = document.getElementById('profile-avatar-remove');
+  if (avatarEdit) avatarEdit.style.display = mode !== null ? 'flex' : 'none';
+  if (avatarRemove) avatarRemove.style.display = (mode !== null && !!document.getElementById('profile-avatar-img')) ? 'flex' : 'none';
+
   if (currentModalCar) renderCarModal(currentModalCar);
 }
 
@@ -582,6 +587,54 @@ async function removeProfileCover() {
   if (coverRemove) coverRemove.style.display = 'none';
 }
 
+function openAvatarUpload() {
+  let resolvedURL = '';
+  openUploadModal({
+    entityType: 'account',
+    title: document.getElementById('profile-avatar-img') ? 'Replace Avatar' : 'Set Avatar',
+    confirm: async (objectKey) => {
+      const res = await fetch('/api/v1/garage/avatar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({object_key: objectKey}),
+      });
+      if (!res.ok) throw new Error('Failed to save avatar');
+      const data = await res.json();
+      resolvedURL = data.url;
+    },
+    onSuccess: () => {
+      const avatarDiv = document.getElementById('profile-avatar');
+      const emoji = avatarDiv && avatarDiv.querySelector('#profile-avatar-emoji');
+      if (emoji) emoji.remove();
+      let img = document.getElementById('profile-avatar-img');
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'profile-avatar-img';
+        avatarDiv && avatarDiv.prepend(img);
+      }
+      img.src = resolvedURL;
+      const removeBtn = document.getElementById('profile-avatar-remove');
+      if (removeBtn) removeBtn.style.display = 'flex';
+    },
+  });
+}
+
+async function removeAvatarPhoto() {
+  const res = await fetch('/api/v1/garage/avatar', {method: 'DELETE'});
+  if (!res.ok) return;
+  const img = document.getElementById('profile-avatar-img');
+  if (img) img.remove();
+  const avatarDiv = document.getElementById('profile-avatar');
+  if (avatarDiv && !avatarDiv.querySelector('span')) {
+    const span = document.createElement('span');
+    span.id = 'profile-avatar-emoji';
+    span.textContent = '👤';
+    avatarDiv.prepend(span);
+  }
+  const removeBtn = document.getElementById('profile-avatar-remove');
+  if (removeBtn) removeBtn.style.display = 'none';
+}
+
 function updateCarCover(carId, objectKey) {
   fetch('/api/v1/garage/cars/photos?car_id=' + carId)
     .then(r => r.ok ? r.json() : [])
@@ -671,7 +724,13 @@ function onCarPhotoAdded(carId, objectKey) {
   <button id="profile-cover-remove" class="profile-cover-remove-btn" style="display:none" onclick="removeProfileCover()">✕</button>
   {{end}}
   <div class="garage-profile-tab">
-    <div class="panel-avatar">👤</div>
+    <div class="panel-avatar-wrap">
+      <div class="panel-avatar" id="profile-avatar">
+        {{if .AvatarURL}}<img id="profile-avatar-img" src="{{.AvatarURL}}">{{else}}<span id="profile-avatar-emoji">👤</span>{{end}}
+        {{if .IsOwner}}<div id="profile-avatar-edit" class="panel-avatar-edit-overlay" style="display:none" onclick="openAvatarUpload()">📷</div>{{end}}
+      </div>
+      {{if .IsOwner}}<button id="profile-avatar-remove" class="panel-avatar-remove-btn" style="display:none" onclick="removeAvatarPhoto()">✕</button>{{end}}
+    </div>
     <div>
       <div class="panel-title">@{{.Username}}'s Garage</div>
       <div class="panel-sub">@{{.Username}} · {{.CarCount}} {{if eq .CarCount 1}}vehicle{{else}}vehicles{{end}}</div>

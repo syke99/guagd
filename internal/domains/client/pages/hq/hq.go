@@ -151,7 +151,9 @@ func (h *HQClient) getMembers(ctx context.Context, clubAccountID string) ([]mode
 	var members []models.HQMember
 	err := h.db.Query(
 		ctx,
-		`SELECT a.username, COALESCE(ap.banner_key, '') AS cover_photo_key
+		`SELECT a.username,
+		        COALESCE(ap.banner_key, '') AS cover_photo_key,
+		        COALESCE(ap.avatar_key, '') AS avatar_key
 		 FROM club_memberships cm
 		 JOIN accounts a ON a.id = cm.member_id
 		 LEFT JOIN account_photos ap ON ap.account_id = cm.member_id
@@ -164,6 +166,9 @@ func (h *HQClient) getMembers(ctx context.Context, clubAccountID string) ([]mode
 		if members[i].CoverPhotoKey != "" {
 			members[i].CoverPhotoURL = h.storage.AccountPhotoURL(members[i].CoverPhotoKey)
 		}
+		if members[i].AvatarKey != "" {
+			members[i].AvatarURL = h.storage.AccountPhotoURL(members[i].AvatarKey)
+		}
 	}
 	return members, err
 }
@@ -171,7 +176,9 @@ func (h *HQClient) getMembers(ctx context.Context, clubAccountID string) ([]mode
 func (h *HQClient) searchNonMembers(ctx context.Context, clubAccountID, q string) ([]models.HQMember, error) {
 	var results []models.HQMember
 	err := h.db.Query(ctx,
-		`SELECT a.username, COALESCE(ap.banner_key, '') AS cover_photo_key
+		`SELECT a.username,
+		        COALESCE(ap.banner_key, '') AS cover_photo_key,
+		        COALESCE(ap.avatar_key, '') AS avatar_key
 		 FROM accounts a
 		 LEFT JOIN account_photos ap ON ap.account_id = a.id
 		 WHERE a.username ILIKE $1

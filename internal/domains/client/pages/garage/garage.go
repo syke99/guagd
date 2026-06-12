@@ -52,7 +52,7 @@ func (g *GarageClient) getUserByUsername(ctx context.Context, username string) (
 	return &user, nil
 }
 
-func (g *GarageClient) getGarageLayout(ctx context.Context, accountID string) ([]models.LayoutItem, map[string]map[string]string, string, error) {
+func (g *GarageClient) getGarageLayout(ctx context.Context, accountID string) ([]models.LayoutItem, map[string]map[string]string, string, string, error) {
 	var layoutJSON, themeJSON string
 	err := g.db.QueryRow(
 		ctx,
@@ -66,7 +66,7 @@ func (g *GarageClient) getGarageLayout(ctx context.Context, accountID string) ([
 		accountID,
 	)
 	if err != nil {
-		return append([]models.LayoutItem{}, defaultLayout...), map[string]map[string]string{}, "", nil
+		return append([]models.LayoutItem{}, defaultLayout...), map[string]map[string]string{}, "", "", nil
 	}
 
 	var layout []models.LayoutItem
@@ -79,15 +79,15 @@ func (g *GarageClient) getGarageLayout(ctx context.Context, accountID string) ([
 		theme = map[string]map[string]string{}
 	}
 
-	var bannerKey string
+	var bannerKey, avatarKey string
 	_ = g.db.QueryRow(
 		ctx,
-		"SELECT COALESCE(banner_key, '') FROM account_photos WHERE account_id = $1",
+		"SELECT COALESCE(banner_key, ''), COALESCE(avatar_key, '') FROM account_photos WHERE account_id = $1",
 		func(rows pgx.Rows) error {
 			if !rows.Next() {
 				return nil
 			}
-			return rows.Scan(&bannerKey)
+			return rows.Scan(&bannerKey, &avatarKey)
 		},
 		accountID,
 	)
@@ -96,8 +96,12 @@ func (g *GarageClient) getGarageLayout(ctx context.Context, accountID string) ([
 	if bannerKey != "" {
 		coverPhotoURL = g.storage.AccountPhotoURL(bannerKey)
 	}
+	avatarURL := ""
+	if avatarKey != "" {
+		avatarURL = g.storage.AccountPhotoURL(avatarKey)
+	}
 
-	return layout, theme, coverPhotoURL, nil
+	return layout, theme, coverPhotoURL, avatarURL, nil
 }
 
 func (g *GarageClient) upsertLayout(ctx context.Context, accountID string, layout []models.LayoutItem) error {
@@ -290,6 +294,25 @@ func (g *GarageClient) setCarPhotoPrimary(ctx context.Context, accountID, carID,
 		return err
 	}
 	return g.db.Exec(ctx, `UPDATE car_photos SET is_primary = true WHERE id = $1`, photoID)
+}
+
+func (g *GarageClient) saveAvatar(ctx context.Context, accountID, objectKey string) error {
+	return g.db.Exec(
+		ctx,
+		`INSERT INTO account_photos (account_id, avatar_key, updated_at)
+		 VALUES ($1, $2, now())
+		 ON CONFLICT (account_id) DO UPDATE
+		 SET avatar_key = EXCLUDED.avatar_key, updated_at = now()`,
+		accountID, objectKey,
+	)
+}
+
+func (g *GarageClient) removeAvatar(ctx context.Context, accountID string) error {
+	return g.db.Exec(
+		ctx,
+		`UPDATE account_photos SET avatar_key = NULL, updated_at = now() WHERE account_id = $1`,
+		accountID,
+	)
 }
 
 func (g *GarageClient) saveCoverPhoto(ctx context.Context, accountID, objectKey string) error {

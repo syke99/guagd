@@ -12,6 +12,8 @@ type HQMember struct {
 	Username      string `db:"username"`
 	CoverPhotoKey string `db:"cover_photo_key"`
 	CoverPhotoURL string `db:"-"`
+	AvatarKey     string `db:"avatar_key"`
+	AvatarURL     string `db:"-"`
 }
 
 type HQPageData struct {

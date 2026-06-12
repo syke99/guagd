@@ -478,9 +478,14 @@ h1 em {
 
 .panel-header-left { display: flex; align-items: center; gap: 12px; }
 
+.panel-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .panel-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--bg3);
   border: 1px solid var(--border2);
@@ -488,6 +493,48 @@ h1 em {
   align-items: center;
   justify-content: center;
   font-size: 15px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.panel-avatar-edit-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 50%;
+}
+
+.panel-avatar-remove-btn {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.75);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  padding: 0;
+  line-height: 1;
 }
 
 .panel-title { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
@@ -1704,7 +1751,30 @@ footer span { font-size: 13px; color: var(--muted); }
 }
 
 .member-card-info {
-  padding: 9px 11px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-card-avatar-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.member-card-avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .member-card-username {

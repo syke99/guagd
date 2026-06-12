@@ -17,4 +17,5 @@ type GaragePageData struct {
 	Layout          []LayoutItem
 	SafeCSS         template.CSS
 	CoverPhotoURL   string
+	AvatarURL       string
 }
