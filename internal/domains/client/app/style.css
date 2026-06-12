@@ -626,6 +626,149 @@ h1 em {
   opacity: 0.5;
 }
 
+/* PROBLEM / SOLUTION */
+.problem-solution {
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  padding: 80px 56px;
+  align-items: start;
+}
+
+.ps-headline {
+  font-size: clamp(28px, 3.5vw, 42px);
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin: 28px 0 20px;
+}
+
+.ps-body {
+  font-size: 16px;
+  color: var(--muted2);
+  line-height: 1.7;
+  max-width: 440px;
+}
+
+.ps-sub {
+  font-size: 14px;
+  color: var(--muted2);
+  line-height: 1.65;
+  margin: 16px 0 28px;
+}
+
+.trust-hierarchy {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.trust-tier {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  transition: background 0.2s;
+}
+.trust-tier:last-child { border-bottom: none; }
+
+.trust-tier--elevated {
+  background: rgba(232, 93, 4, 0.04);
+}
+
+.trust-tier--top {
+  background: rgba(232, 93, 4, 0.08);
+}
+
+.tier-level {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--muted);
+  flex-shrink: 0;
+  width: 20px;
+}
+
+.trust-tier--elevated .tier-level,
+.trust-tier--top .tier-level {
+  color: var(--accent);
+}
+
+.tier-info { flex: 1; min-width: 0; }
+
+.tier-name {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.tier-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.tier-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tier-badge--accent {
+  color: var(--accent);
+  border-color: rgba(232, 93, 4, 0.3);
+  background: rgba(232, 93, 4, 0.06);
+}
+
+.tier-badge--top {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .problem-solution {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding: 56px 20px;
+  }
+  .ps-body { max-width: 100%; }
+}
+
+/* ABOUT */
+.about-slim {
+  border-top: 1px solid var(--border);
+  padding: 64px 56px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.about-slim p {
+  font-size: 16px;
+  color: var(--muted2);
+  line-height: 1.75;
+  max-width: 580px;
+}
+
+@media (max-width: 768px) {
+  .about-slim { padding: 56px 20px; }
+}
+
 /* FEATURES */
 .features {
   border-top: 1px solid var(--border);
