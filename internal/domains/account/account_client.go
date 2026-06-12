@@ -2,11 +2,9 @@ package account
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/jackc/pgx/v5"
 
 	"guagd/internal/pkg/db"
+	"guagd/internal/pkg/models"
 )
 
 type accountClient struct {
@@ -44,18 +42,8 @@ func (u *accountClient) registerUser(ctx context.Context, name, email, visitorId
 	)
 }
 
-type accountInfo struct {
-	Username string
-	AcctType string
-}
-
-type searchResult struct {
-	Username string
-	AcctType string
-}
-
-func (u *accountClient) searchAccounts(ctx context.Context, q, acctType string) ([]searchResult, error) {
-	var results []searchResult
+func (u *accountClient) searchAccounts(ctx context.Context, q, acctType string) ([]models.AccountSearchResult, error) {
+	var results []models.AccountSearchResult
 	var query string
 	var args []any
 	if acctType != "" {
@@ -74,36 +62,19 @@ func (u *accountClient) searchAccounts(ctx context.Context, q, acctType string) 
 		 LIMIT 10`
 		args = []any{"%" + q + "%"}
 	}
-	err := u.db.Query(ctx, query,
-		func(rows pgx.Rows) error {
-			for rows.Next() {
-				var r searchResult
-				if err := rows.Scan(&r.Username, &r.AcctType); err != nil {
-					return err
-				}
-				results = append(results, r)
-			}
-			return rows.Err()
-		},
-		args...,
-	)
+	err := u.db.Query(ctx, query, db.WithResultsOf(&results), args...)
 	return results, err
 }
 
-func (u *accountClient) getAccountBySupertokensID(ctx context.Context, supertokensID string) (accountInfo, error) {
-	var info accountInfo
+func (u *accountClient) getAccountBySupertokensID(ctx context.Context, supertokensID string) (models.AccountInfo, error) {
+	var info models.AccountInfo
 	err := u.db.QueryRow(ctx,
 		"SELECT username, acct_type FROM accounts WHERE supertokens_id = $1",
-		func(rows pgx.Rows) error {
-			if !rows.Next() {
-				return fmt.Errorf("account not found")
-			}
-			return rows.Scan(&info.Username, &info.AcctType)
-		},
+		db.WithResultOf(&info),
 		supertokensID,
 	)
 	if err != nil {
-		return accountInfo{}, err
+		return models.AccountInfo{}, err
 	}
 	return info, nil
 }

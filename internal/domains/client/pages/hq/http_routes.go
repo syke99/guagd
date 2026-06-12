@@ -10,7 +10,9 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 
+	"guagd/internal/pkg/css"
 	"guagd/internal/pkg/middleware"
+	"guagd/internal/pkg/models"
 )
 
 func (h *HQClient) HQPage(w http.ResponseWriter, r *http.Request) {
@@ -44,17 +46,17 @@ func (h *HQClient) HQPage(w http.ResponseWriter, r *http.Request) {
 	members, err := h.getMembers(r.Context(), user.SupertokensID)
 	if err != nil {
 		log.Printf("hqPage: get members: %s", err)
-		members = []HQMember{}
+		members = []models.HQMember{}
 	}
 
-	data := HQPageData{
+	data := models.HQPageData{
 		Username:        user.Username,
 		IsOwner:         isOwner,
 		IsAuthenticated: isAuthenticated,
 		MemberCount:     len(members),
 		Members:         members,
 		Layout:          layout,
-		SafeCSS:         buildThemeCSS(theme),
+		SafeCSS:         css.BuildTheme(theme),
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -64,7 +66,7 @@ func (h *HQClient) HQPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HQClient) SaveLayout(w http.ResponseWriter, r *http.Request) {
-	var layout []LayoutItem
+	var layout []models.LayoutItem
 	if err := json.NewDecoder(r.Body).Decode(&layout); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return

@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"strings"
-	"unicode"
 
 	"github.com/jackc/pgx/v5"
 
 	"guagd/internal/domains/client/pages/shared"
 	"guagd/internal/pkg/db"
+	"guagd/internal/pkg/models"
 	"guagd/internal/pkg/storage"
 )
 
@@ -34,64 +33,17 @@ func NewGarageClient(db db.DB, store *storage.Client) *GarageClient {
 	return &GarageClient{db: db, storage: store}
 }
 
-type GarageUser struct {
-	SupertokensID string
-	Username      string
-}
-
-type LayoutItem struct {
-	Component string `json:"component"`
-	X         int    `json:"x"`
-	Y         int    `json:"y"`
-	W         int    `json:"w"`
-	H         int    `json:"h"`
-}
-
-type Car struct {
-	ID              string `json:"id"`
-	Year            int    `json:"year"`
-	Make            string `json:"make"`
-	Model           string `json:"model"`
-	Trim            string `json:"trim"`
-	Mileage         int    `json:"mileage"`
-	PrimaryPhotoURL string `json:"primary_photo_url"`
-}
-
-type CarPhoto struct {
-	ID        string `json:"id"`
-	CarID     string `json:"car_id"`
-	ObjectKey string `json:"object_key"`
-	URL       string `json:"url"`
-	IsPrimary bool   `json:"is_primary"`
-}
-
-type GaragePageData struct {
-	Username        string
-	IsOwner         bool
-	IsAuthenticated bool
-	CarCount        int
-	Cars            []Car
-	Layout          []LayoutItem
-	SafeCSS         template.CSS
-	CoverPhotoURL   string
-}
-
-var defaultLayout = []LayoutItem{
+var defaultLayout = []models.LayoutItem{
 	{Component: "profile-header", X: 0, Y: 0, W: 12, H: 3},
 	{Component: "car-list", X: 0, Y: 3, W: 12, H: 6},
 }
 
-func (g *GarageClient) getUserByUsername(ctx context.Context, username string) (*GarageUser, error) {
-	var user GarageUser
+func (g *GarageClient) getUserByUsername(ctx context.Context, username string) (*models.GarageUser, error) {
+	var user models.GarageUser
 	err := g.db.QueryRow(
 		ctx,
 		"SELECT supertokens_id, username FROM accounts WHERE username = $1",
-		func(rows pgx.Rows) error {
-			if !rows.Next() {
-				return pgx.ErrNoRows
-			}
-			return rows.Scan(&user.SupertokensID, &user.Username)
-		},
+		db.WithResultOf(&user),
 		username,
 	)
 	if err != nil {
@@ -100,7 +52,7 @@ func (g *GarageClient) getUserByUsername(ctx context.Context, username string) (
 	return &user, nil
 }
 
-func (g *GarageClient) getGarageLayout(ctx context.Context, supertokensID string) ([]LayoutItem, map[string]map[string]string, string, error) {
+func (g *GarageClient) getGarageLayout(ctx context.Context, supertokensID string) ([]models.LayoutItem, map[string]map[string]string, string, error) {
 	var layoutJSON, themeJSON string
 	var coverPhotoKey string
 	err := g.db.QueryRow(
@@ -115,12 +67,12 @@ func (g *GarageClient) getGarageLayout(ctx context.Context, supertokensID string
 		supertokensID,
 	)
 	if err != nil {
-		return append([]LayoutItem{}, defaultLayout...), map[string]map[string]string{}, "", nil
+		return append([]models.LayoutItem{}, defaultLayout...), map[string]map[string]string{}, "", nil
 	}
 
-	var layout []LayoutItem
+	var layout []models.LayoutItem
 	if err := json.Unmarshal([]byte(layoutJSON), &layout); err != nil || len(layout) == 0 {
-		layout = append([]LayoutItem{}, defaultLayout...)
+		layout = append([]models.LayoutItem{}, defaultLayout...)
 	}
 
 	var theme map[string]map[string]string
@@ -136,7 +88,7 @@ func (g *GarageClient) getGarageLayout(ctx context.Context, supertokensID string
 	return layout, theme, coverPhotoURL, nil
 }
 
-func (g *GarageClient) upsertLayout(ctx context.Context, supertokensID string, layout []LayoutItem) error {
+func (g *GarageClient) upsertLayout(ctx context.Context, supertokensID string, layout []models.LayoutItem) error {
 	b, err := json.Marshal(layout)
 	if err != nil {
 		return err
@@ -166,49 +118,46 @@ func (g *GarageClient) upsertTheme(ctx context.Context, supertokensID string, th
 	)
 }
 
-func (g *GarageClient) getCars(ctx context.Context, ownerID string) ([]Car, error) {
-	var cars []Car
+func (g *GarageClient) getCars(ctx context.Context, ownerID string) ([]models.Car, error) {
+	var cars []models.Car
 	err := g.db.Query(
 		ctx,
-		`SELECT c.id::text, c.year, c.make, c.model,
-		        COALESCE(c.trim, ''), COALESCE(c.mileage, 0),
-		        COALESCE(p.object_key, '')
+		`SELECT c.id::text,
+		        c.year,
+		        c.make,
+		        c.model,
+		        COALESCE(c.trim, '')        AS trim,
+		        COALESCE(c.mileage, 0)      AS mileage,
+		        COALESCE(p.object_key, '')  AS object_key
 		 FROM cars c
 		 LEFT JOIN car_photos p ON p.car_id = c.id AND p.is_primary = true
 		 WHERE c.owner_id = $1
 		 ORDER BY c.created_at`,
-		func(rows pgx.Rows) error {
-			for rows.Next() {
-				var c Car
-				var photoKey string
-				if err := rows.Scan(&c.ID, &c.Year, &c.Make, &c.Model, &c.Trim, &c.Mileage, &photoKey); err != nil {
-					return err
-				}
-				if photoKey != "" {
-					c.PrimaryPhotoURL = g.storage.CarPhotoURL(photoKey)
-				}
-				cars = append(cars, c)
-			}
-			return rows.Err()
-		},
+		db.WithResultsOf(&cars),
 		ownerID,
 	)
+	for i := range cars {
+		if cars[i].ObjectKey != "" {
+			cars[i].PrimaryPhotoURL = g.storage.CarPhotoURL(cars[i].ObjectKey)
+		}
+	}
 	return cars, err
 }
 
-func (g *GarageClient) addCar(ctx context.Context, ownerID string, car Car) (Car, error) {
-	var created Car
+func (g *GarageClient) addCar(ctx context.Context, ownerID string, car models.Car) (models.Car, error) {
+	var created models.Car
 	err := g.db.QueryRow(
 		ctx,
 		`INSERT INTO cars (owner_id, year, make, model, trim, mileage)
 		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, 0))
-		 RETURNING id::text, year, make, model, COALESCE(trim, ''), COALESCE(mileage, 0)`,
-		func(rows pgx.Rows) error {
-			if !rows.Next() {
-				return pgx.ErrNoRows
-			}
-			return rows.Scan(&created.ID, &created.Year, &created.Make, &created.Model, &created.Trim, &created.Mileage)
-		},
+		 RETURNING id::text,
+		           year,
+		           make,
+		           model,
+		           COALESCE(trim, '')   AS trim,
+		           COALESCE(mileage, 0) AS mileage,
+		           ''                   AS object_key`,
+		db.WithResultOf(&created),
 		ownerID, car.Year, car.Make, car.Model, car.Trim, car.Mileage,
 	)
 	return created, err
@@ -222,30 +171,26 @@ func (g *GarageClient) removeCar(ctx context.Context, ownerID, carID string) err
 	)
 }
 
-func (g *GarageClient) getCarPhotos(ctx context.Context, carID string) ([]CarPhoto, error) {
-	var photos []CarPhoto
+func (g *GarageClient) getCarPhotos(ctx context.Context, carID string) ([]models.CarPhoto, error) {
+	var photos []models.CarPhoto
 	err := g.db.Query(
 		ctx,
-		`SELECT id::text, car_id::text, object_key, is_primary
+		`SELECT id::text,
+		        car_id::text AS car_id,
+		        object_key,
+		        is_primary
 		 FROM car_photos WHERE car_id = $1
 		 ORDER BY is_primary DESC, uploaded_at ASC`,
-		func(rows pgx.Rows) error {
-			for rows.Next() {
-				var p CarPhoto
-				if err := rows.Scan(&p.ID, &p.CarID, &p.ObjectKey, &p.IsPrimary); err != nil {
-					return err
-				}
-				p.URL = g.storage.CarPhotoURL(p.ObjectKey)
-				photos = append(photos, p)
-			}
-			return rows.Err()
-		},
+		db.WithResultsOf(&photos),
 		carID,
 	)
+	for i := range photos {
+		photos[i].URL = g.storage.CarPhotoURL(photos[i].ObjectKey)
+	}
 	return photos, err
 }
 
-func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKey string, isPrimary bool) (CarPhoto, error) {
+func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKey string, isPrimary bool) (models.CarPhoto, error) {
 	var owned int
 	err := g.db.QueryRow(
 		ctx,
@@ -259,25 +204,23 @@ func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKe
 		carID, ownerID,
 	)
 	if err != nil || owned == 0 {
-		return CarPhoto{}, fmt.Errorf("car not found")
+		return models.CarPhoto{}, fmt.Errorf("car not found")
 	}
 
 	if isPrimary {
 		_ = g.db.Exec(ctx, `UPDATE car_photos SET is_primary = false WHERE car_id = $1`, carID)
 	}
 
-	var photo CarPhoto
+	var photo models.CarPhoto
 	err = g.db.QueryRow(
 		ctx,
 		`INSERT INTO car_photos (car_id, object_key, is_primary)
 		 VALUES ($1, $2, $3)
-		 RETURNING id::text, car_id::text, object_key, is_primary`,
-		func(rows pgx.Rows) error {
-			if !rows.Next() {
-				return pgx.ErrNoRows
-			}
-			return rows.Scan(&photo.ID, &photo.CarID, &photo.ObjectKey, &photo.IsPrimary)
-		},
+		 RETURNING id::text,
+		           car_id::text AS car_id,
+		           object_key,
+		           is_primary`,
+		db.WithResultOf(&photo),
 		carID, objectKey, isPrimary,
 	)
 	return photo, err
@@ -346,52 +289,4 @@ func (g *GarageClient) saveCoverPhoto(ctx context.Context, ownerID, objectKey st
 		 SET cover_photo_key = EXCLUDED.cover_photo_key`,
 		ownerID, objectKey,
 	)
-}
-
-func buildThemeCSS(theme map[string]map[string]string) template.CSS {
-	var sb strings.Builder
-	if global, ok := theme["global"]; ok && len(global) > 0 {
-		sb.WriteString(":root {\n")
-		for prop, val := range global {
-			if p := sanitizeCSSProp(prop); p != "" {
-				if v := sanitizeCSSValue(val); v != "" {
-					fmt.Fprintf(&sb, "  %s: %s;\n", p, v)
-				}
-			}
-		}
-		sb.WriteString("}\n")
-	}
-	for component, styles := range theme {
-		if component == "global" || len(styles) == 0 {
-			continue
-		}
-		fmt.Fprintf(&sb, "#gs-%s {\n", component)
-		for prop, val := range styles {
-			if p := sanitizeCSSProp(prop); p != "" {
-				if v := sanitizeCSSValue(val); v != "" {
-					fmt.Fprintf(&sb, "  %s: %s;\n", p, v)
-				}
-			}
-		}
-		sb.WriteString("}\n")
-	}
-	return template.CSS(sb.String())
-}
-
-func sanitizeCSSProp(p string) string {
-	for _, ch := range p {
-		if !unicode.IsLetter(ch) && !unicode.IsDigit(ch) && ch != '-' {
-			return ""
-		}
-	}
-	return p
-}
-
-func sanitizeCSSValue(v string) string {
-	for _, dangerous := range []string{"(", ")", ";", "{", "}", "<", ">", `"`, "'", `\`, "\n", "\r"} {
-		if strings.Contains(v, dangerous) {
-			return ""
-		}
-	}
-	return strings.TrimSpace(v)
 }

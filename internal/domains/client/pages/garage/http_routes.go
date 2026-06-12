@@ -9,10 +9,10 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 
+	"guagd/internal/pkg/css"
 	"guagd/internal/pkg/middleware"
+	"guagd/internal/pkg/models"
 )
-
-
 
 func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	username := strings.TrimPrefix(r.PathValue("username"), "@")
@@ -45,17 +45,17 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	cars, err := g.getCars(r.Context(), user.SupertokensID)
 	if err != nil {
 		log.Printf("garagePage: get cars: %s", err)
-		cars = []Car{}
+		cars = make([]models.Car, 0)
 	}
 
-	data := GaragePageData{
+	data := models.GaragePageData{
 		Username:        user.Username,
 		IsOwner:         isOwner,
 		IsAuthenticated: isAuthenticated,
 		CarCount:        len(cars),
 		Cars:            cars,
 		Layout:          layout,
-		SafeCSS:         buildThemeCSS(theme),
+		SafeCSS:         css.BuildTheme(theme),
 		CoverPhotoURL:   coverPhotoURL,
 	}
 
@@ -66,7 +66,7 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *GarageClient) SaveLayout(w http.ResponseWriter, r *http.Request) {
-	var layout []LayoutItem
+	var layout []models.LayoutItem
 	if err := json.NewDecoder(r.Body).Decode(&layout); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
@@ -100,13 +100,7 @@ func (g *GarageClient) SaveTheme(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *GarageClient) AddCar(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Year    int    `json:"year"`
-		Make    string `json:"make"`
-		Model   string `json:"model"`
-		Trim    string `json:"trim"`
-		Mileage int    `json:"mileage"`
-	}
+	var body models.Car
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
@@ -117,7 +111,7 @@ func (g *GarageClient) AddCar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := r.Context().Value(middleware.ContextKeyUserID).(string)
-	car, err := g.addCar(r.Context(), userID, Car{
+	car, err := g.addCar(r.Context(), userID, models.Car{
 		Year:    body.Year,
 		Make:    strings.TrimSpace(body.Make),
 		Model:   strings.TrimSpace(body.Model),
@@ -172,7 +166,7 @@ func (g *GarageClient) GetCarPhotos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if photos == nil {
-		photos = []CarPhoto{}
+		photos = []models.CarPhoto{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
