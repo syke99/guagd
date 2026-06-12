@@ -15,10 +15,7 @@ import (
 )
 
 func prefixRoute(prefix, route string) string {
-	if prefix == "/" {
-		prefix = ""
-	}
-	return fmt.Sprintf("%s/%s", prefix, route)
+	return strings.TrimRight(prefix, "/") + "/" + route
 }
 
 func (c *client) Handlers() map[string]http.HandlerFunc {
