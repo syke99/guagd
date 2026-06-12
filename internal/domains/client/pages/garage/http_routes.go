@@ -157,6 +157,28 @@ func (g *GarageClient) RemoveCar(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (g *GarageClient) GetCarPhotos(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	if carID == "" {
+		http.Error(w, "car_id required", http.StatusBadRequest)
+		return
+	}
+
+	photos, err := g.getCarPhotos(r.Context(), carID)
+	if err != nil {
+		log.Printf("getCarPhotos: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	if photos == nil {
+		photos = []CarPhoto{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(photos)
+}
+
 func (g *GarageClient) AddCarPhoto(w http.ResponseWriter, r *http.Request) {
 	carID := r.URL.Query().Get("car_id")
 	if carID == "" {

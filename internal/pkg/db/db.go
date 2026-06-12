@@ -61,6 +61,7 @@ func (d *database) Query(ctx context.Context, sql string, result Results, args .
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	return result(rows)
 }
 
@@ -69,5 +70,6 @@ func (d *database) QueryRow(ctx context.Context, sql string, result Result, args
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	return result(rows)
 }

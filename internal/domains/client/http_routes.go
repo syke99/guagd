@@ -91,6 +91,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		"/api/v1/garage/cover":                                       middleware.RequireAuth(c.garage.SaveCoverPhoto),
 		"/api/v1/garage/cars/add":                                    middleware.RequireAuth(c.garage.AddCar),
 		"/api/v1/garage/cars/remove":                                 middleware.RequireAuth(c.garage.RemoveCar),
+		"/api/v1/garage/cars/photos":          c.garage.GetCarPhotos,
 		"/api/v1/garage/cars/photos/add":     middleware.RequireAuth(c.garage.AddCarPhoto),
 		"/api/v1/garage/cars/photos/remove":  middleware.RequireAuth(c.garage.RemoveCarPhoto),
 		"/api/v1/garage/cars/photos/primary": middleware.RequireAuth(c.garage.SetCarPhotoPrimary),

@@ -52,7 +52,45 @@ border-radius: 16px;"></textarea>
 </div>
 {{end}}
 
+<!-- Car detail modal -->
+<div id="car-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeCarModal()">
+  <div class="car-modal-inner">
+    <button class="modal-close-btn" onclick="closeCarModal()">✕</button>
+    <div class="build-card" id="car-modal-card"></div>
+  </div>
+</div>
+
+<!-- Photo upload modal -->
+<div id="upload-modal" class="modal-overlay" style="display:none;z-index:600" onclick="if(event.target===this)closeUploadModal()">
+  <div class="upload-modal-inner">
+    <div class="upload-modal-header">
+      <div class="upload-modal-title" id="upload-modal-title">Add Photo</div>
+      <button class="modal-close-btn" onclick="closeUploadModal()">✕</button>
+    </div>
+    <div id="upload-limit-msg" class="upload-limit-msg" style="display:none">
+      You've reached the photo limit for this vehicle.
+    </div>
+    <div class="upload-drop-zone" id="upload-drop-zone">
+      <div class="upload-placeholder" id="upload-placeholder">
+        <div class="upload-icon">📷</div>
+        <div class="upload-placeholder-text">Drop a photo here or <span class="upload-link">browse</span></div>
+        <div class="upload-hint">JPEG, PNG, or WebP</div>
+      </div>
+      <div class="upload-preview" id="upload-preview" style="display:none">
+        <img id="upload-preview-img">
+      </div>
+    </div>
+    <input type="file" id="upload-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+    <div class="upload-actions">
+      <button class="btn-primary" id="upload-confirm-btn" disabled onclick="confirmUpload()">Upload Photo</button>
+    </div>
+    <div id="upload-status" class="upload-status"></div>
+  </div>
+</div>
+
 <script>
+const isOwner = {{if .IsOwner}}true{{else}}false{{end}};
+const currentUsername = '{{.Username}}';
 const grid = GridStack.init({
   column: 12,
   cellHeight: 80,
@@ -60,9 +98,10 @@ const grid = GridStack.init({
   float: false,
 });
 
-{{if .IsOwner}}
 let editMode = null;
+let currentModalCar = null;
 
+{{if .IsOwner}}
 function toggleEdit() {
   const dropdown = document.getElementById('edit-dropdown');
   const editBtn = document.getElementById('btn-edit');
@@ -74,6 +113,8 @@ function toggleEdit() {
   } else {
     dropdown.style.display = 'flex';
     editBtn.classList.add('active');
+    editMode = 'edit';
+    if (currentModalCar) renderCarModal(currentModalCar);
   }
 }
 
@@ -98,6 +139,8 @@ function applyMode(mode) {
     const panel = document.getElementById('add-car-panel');
     if (panel) panel.style.display = 'none';
   }
+
+  if (currentModalCar) renderCarModal(currentModalCar);
 }
 
 function toggleAddCar() {
@@ -141,11 +184,18 @@ function addCar() {
     if (empty) empty.remove();
     const wrap = document.createElement('div');
     wrap.className = 'car-card-wrap';
+    wrap.dataset.id = car.id;
+    wrap.dataset.year = car.year;
+    wrap.dataset.make = car.make;
+    wrap.dataset.model = car.model;
+    wrap.dataset.trim = car.trim || '';
+    wrap.dataset.mileage = car.mileage || 0;
+    wrap.dataset.primaryPhotoUrl = '';
     const name = `${car.year} ${car.make} ${car.model}`;
     const subParts = [car.trim, car.mileage ? car.mileage.toLocaleString() + ' mi' : ''].filter(Boolean);
     const sub = subParts.length ? `<div class="car-card-sub">${subParts.join(' · ')}</div>` : '';
     wrap.innerHTML =
-      `<div class="car-card">` +
+      `<div class="car-card" onclick="openCarModal(this.closest('.car-card-wrap'))">` +
         `<div class="car-card-thumb"><div class="car-card-icon">🚗</div></div>` +
         `<div class="car-card-info"><div class="car-card-name">${name}</div>${sub}</div>` +
       `</div>` +
@@ -262,6 +312,290 @@ function saveStyle() {
   });
 }
 {{end}}
+
+// ── Upload modal ──────────────────────────────────────────────
+let uploadCtx = null;
+
+function openUploadModal(ctx) {
+  // ctx: { entityType, carId, isPrimary, title, maxPhotos, currentCount, onSuccess }
+  uploadCtx = ctx;
+  const limitMsg = document.getElementById('upload-limit-msg');
+  const dropZone = document.getElementById('upload-drop-zone');
+  const confirmBtn = document.getElementById('upload-confirm-btn');
+  const reachedLimit = ctx.maxPhotos != null && ctx.currentCount >= ctx.maxPhotos;
+
+  document.getElementById('upload-modal-title').textContent = ctx.title || 'Add Photo';
+  document.getElementById('upload-file-input').value = '';
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('upload-placeholder').style.display = 'flex';
+  document.getElementById('upload-status').textContent = '';
+  confirmBtn.disabled = true;
+
+  limitMsg.style.display = reachedLimit ? 'block' : 'none';
+  dropZone.style.display = reachedLimit ? 'none' : 'flex';
+  confirmBtn.style.display = reachedLimit ? 'none' : 'block';
+
+  document.getElementById('upload-modal').style.display = 'flex';
+}
+
+function closeUploadModal() {
+  document.getElementById('upload-modal').style.display = 'none';
+  uploadCtx = null;
+}
+
+document.getElementById('upload-drop-zone').addEventListener('click', function() {
+  document.getElementById('upload-file-input').click();
+});
+
+document.getElementById('upload-drop-zone').addEventListener('dragover', function(e) {
+  e.preventDefault();
+  this.classList.add('drag-over');
+});
+document.getElementById('upload-drop-zone').addEventListener('dragleave', function() {
+  this.classList.remove('drag-over');
+});
+document.getElementById('upload-drop-zone').addEventListener('drop', function(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) previewFile(file);
+});
+
+document.getElementById('upload-file-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) previewFile(file);
+});
+
+function previewFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('upload-preview-img').src = ev.target.result;
+    document.getElementById('upload-preview').style.display = 'flex';
+    document.getElementById('upload-placeholder').style.display = 'none';
+    document.getElementById('upload-confirm-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function confirmUpload() {
+  const fileInput = document.getElementById('upload-file-input');
+  const file = fileInput.files[0];
+  if (!file || !uploadCtx) return;
+
+  const btn = document.getElementById('upload-confirm-btn');
+  const status = document.getElementById('upload-status');
+  btn.disabled = true;
+  status.textContent = 'Uploading…';
+
+  try {
+    const presignRes = await fetch('/api/v1/upload/presign', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({entity_type: uploadCtx.entityType, content_type: file.type}),
+    });
+    if (!presignRes.ok) throw new Error('Failed to get upload URL');
+    const {upload_url, object_key} = await presignRes.json();
+
+    const putRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: {'Content-Type': file.type},
+      body: file,
+    });
+    if (!putRes.ok) throw new Error('Upload to storage failed');
+
+    await uploadCtx.confirm(object_key);
+
+    const onSuccess = uploadCtx.onSuccess;
+    status.textContent = '';
+    closeUploadModal();
+    if (onSuccess) onSuccess(object_key);
+  } catch (err) {
+    status.textContent = err.message || 'Upload failed. Try again.';
+    btn.disabled = false;
+  }
+}
+
+// ── Car modal ─────────────────────────────────────────────────
+let activeCarId = null;
+
+function openCarModal(wrap) {
+  const id = wrap.dataset.id;
+  const year = wrap.dataset.year;
+  const make = wrap.dataset.make;
+  const model = wrap.dataset.model;
+  const trim = wrap.dataset.trim || '';
+  const primaryURL = wrap.dataset.primaryPhotoUrl || '';
+  activeCarId = id;
+  currentModalCar = {id, year, make, model, trim, primaryURL, photos: null};
+
+  renderCarModal(currentModalCar);
+  document.getElementById('car-modal').style.display = 'flex';
+
+  fetch('/api/v1/garage/cars/photos?car_id=' + id)
+    .then(r => r.ok ? r.json() : [])
+    .then(photos => {
+      if (activeCarId === id) {
+        currentModalCar = Object.assign({}, currentModalCar, {photos});
+        renderCarModal(currentModalCar);
+      }
+    });
+}
+
+function closeCarModal() {
+  document.getElementById('car-modal').style.display = 'none';
+  activeCarId = null;
+  currentModalCar = null;
+}
+
+function renderCarModal({id, year, make, model, trim, primaryURL, photos}) {
+  const canEdit = isOwner && editMode !== null;
+
+  const coverClick = canEdit
+    ? `onclick="openUploadModal({entityType:'car',carId:'${id}',isPrimary:true,title:'${primaryURL ? 'Replace' : 'Add'} Cover Photo',confirm:confirmCarCover,onSuccess:key=>updateCarCover('${id}',key)})" style="cursor:pointer"`
+    : '';
+
+  const coverInner = primaryURL
+    ? `<img src="${primaryURL}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:1">`
+    : (canEdit ? `<div class="card-cover-inner"><div class="card-cover-icon">📷</div><div class="card-cover-label">Add Cover Photo</div></div>` : `<div class="card-cover-inner"><div class="card-cover-icon">📷</div><div class="card-cover-label">Cover Photo</div></div>`);
+
+  const primaryPhoto = photos && photos.find(p => p.is_primary);
+  const coverRemoveBtn = (canEdit && primaryURL && primaryPhoto)
+    ? `<button class="cover-delete-btn" onclick="event.stopPropagation();deleteCarPhoto('${primaryPhoto.id}','${id}')">✕</button>`
+    : '';
+
+  const photoStrip = buildPhotoStrip(id, photos, canEdit);
+
+  document.getElementById('car-modal-card').innerHTML = `
+    <div class="card-cover" ${coverClick}>${coverInner}${coverRemoveBtn}</div>
+    <div class="card-body">
+      <div class="build-card-header">
+        <div>
+          <div class="build-car-name">${year} ${make} ${model}</div>
+          <div class="build-car-sub">${trim || 'Build Details'}</div>
+        </div>
+        <div class="build-stats">
+          <div class="stat"><div class="stat-val">0</div><div class="stat-label">Mods</div></div>
+          <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
+        </div>
+      </div>
+      <div style="padding:20px 0;color:var(--muted);font-size:13px;text-align:center;border-bottom:1px solid var(--border)">No mods documented yet.</div>
+      <div class="build-url" style="margin:20px 0">
+        <span>gaugd.com/garage/@${currentUsername}</span>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText(window.location.href)">Copy</button>
+      </div>
+    </div>
+    ${photoStrip}
+  `;
+}
+
+function buildPhotoStrip(carId, photos, canEdit) {
+  const MAX_PHOTOS = 10;
+  const stripPhotos = (photos || []).filter(p => !p.is_primary);
+  const thumbs = stripPhotos.slice(0, 4).map(p => {
+    const deleteBtn = canEdit
+      ? `<button class="photo-thumb-delete" onclick="event.stopPropagation();deleteCarPhoto('${p.id}','${carId}')">✕</button>`
+      : '';
+    return `<div class="photo-thumb" style="position:relative;overflow:hidden">${deleteBtn}<img class="photo-thumb-img" src="${p.url}"></div>`;
+  }).join('');
+
+  const remaining = stripPhotos.length > 4
+    ? `<div class="photo-thumb-more">+${stripPhotos.length - 4}<small>photos</small></div>`
+    : '';
+
+  const totalCount = photos ? photos.length : 0;
+  const addBtn = canEdit
+    ? `<div class="photo-thumb-add" onclick="openUploadModal({entityType:'car',carId:'${carId}',isPrimary:false,title:'Add Photo',maxPhotos:${MAX_PHOTOS},currentCount:${totalCount},confirm:confirmCarPhoto,onSuccess:key=>onCarPhotoAdded('${carId}',key)})">+</div>`
+    : '';
+
+  if (!photos) {
+    return `<div class="photo-strip">${addBtn}</div>`;
+  }
+
+  return `<div class="photo-strip">${thumbs}${remaining}${addBtn}</div>`;
+}
+
+async function confirmCarPhoto(objectKey) {
+  const isPrimary = uploadCtx.isPrimary;
+  const res = await fetch(`/api/v1/garage/cars/photos/add?car_id=${uploadCtx.carId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({object_key: objectKey, is_primary: isPrimary}),
+  });
+  if (!res.ok) throw new Error('Failed to save photo');
+  return res.json();
+}
+
+async function confirmCarCover(objectKey) {
+  const res = await fetch(`/api/v1/garage/cars/photos/add?car_id=${uploadCtx.carId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({object_key: objectKey, is_primary: true}),
+  });
+  if (!res.ok) throw new Error('Failed to save cover photo');
+  return res.json();
+}
+
+function updateCarCover(carId, objectKey) {
+  fetch('/api/v1/garage/cars/photos?car_id=' + carId)
+    .then(r => r.ok ? r.json() : [])
+    .then(photos => {
+      const primary = photos.find(p => p.is_primary);
+      const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
+      if (wrap) {
+        const url = primary ? primary.url : '';
+        wrap.dataset.primaryPhotoUrl = url;
+        const thumb = wrap.querySelector('.car-card-thumb');
+        if (thumb) {
+          thumb.innerHTML = url ? `<img src="${url}" style="width:100%;height:100%;object-fit:cover">` : '';
+        }
+      }
+      if (currentModalCar && currentModalCar.id === carId) {
+        currentModalCar = Object.assign({}, currentModalCar, {primaryURL: primary ? primary.url : '', photos});
+        renderCarModal(currentModalCar);
+      }
+    });
+}
+
+async function deleteCarPhoto(photoId, carId) {
+  const res = await fetch(`/api/v1/garage/cars/photos/remove?photo_id=${photoId}`, {method: 'POST'});
+  if (!res.ok) return;
+  fetch('/api/v1/garage/cars/photos?car_id=' + carId)
+    .then(r => r.ok ? r.json() : [])
+    .then(photos => {
+      const primary = photos.find(p => p.is_primary);
+      const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
+      if (wrap) {
+        const url = primary ? primary.url : '';
+        wrap.dataset.primaryPhotoUrl = url;
+        const thumb = wrap.querySelector('.car-card-thumb');
+        if (thumb) {
+          thumb.innerHTML = url ? `<img src="${url}" style="width:100%;height:100%;object-fit:cover">` : '';
+        }
+      }
+      if (currentModalCar && currentModalCar.id === carId) {
+        currentModalCar = Object.assign({}, currentModalCar, {primaryURL: primary ? primary.url : '', photos});
+        renderCarModal(currentModalCar);
+      }
+    });
+}
+
+function onCarPhotoAdded(carId, objectKey) {
+  fetch('/api/v1/garage/cars/photos?car_id=' + carId)
+    .then(r => r.ok ? r.json() : [])
+    .then(photos => {
+      const primary = photos.find(p => p.is_primary);
+      const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
+      if (wrap && primary) {
+        wrap.dataset.primaryPhotoUrl = primary.url;
+        const thumb = wrap.querySelector('.car-card-thumb');
+        if (thumb) thumb.innerHTML = `<img src="${primary.url}" style="width:100%;height:100%;object-fit:cover">`;
+      }
+      if (currentModalCar && currentModalCar.id === carId) {
+        currentModalCar = Object.assign({}, currentModalCar, {primaryURL: primary ? primary.url : '', photos});
+        renderCarModal(currentModalCar);
+      }
+    });
+}
 </script>
 {{end}}
 
@@ -312,9 +646,22 @@ function saveStyle() {
   {{end}}
   <div class="car-grid">
     {{range .Cars}}
-    <div class="car-card-wrap">
-      <div class="car-card">
-        <div class="car-card-thumb"><div class="car-card-icon">🚗</div></div>
+    <div class="car-card-wrap"
+         data-id="{{.ID}}"
+         data-year="{{.Year}}"
+         data-make="{{.Make}}"
+         data-model="{{.Model}}"
+         data-trim="{{.Trim}}"
+         data-mileage="{{.Mileage}}"
+         data-primary-photo-url="{{.PrimaryPhotoURL}}">
+      <div class="car-card" onclick="openCarModal(this.closest('.car-card-wrap'))">
+        <div class="car-card-thumb">
+          {{if .PrimaryPhotoURL}}
+          <img src="{{.PrimaryPhotoURL}}" style="width:100%;height:100%;object-fit:cover">
+          {{else}}
+          <div class="car-card-icon">🚗</div>
+          {{end}}
+        </div>
         <div class="car-card-info">
           <div class="car-card-name">{{.Year}} {{.Make}} {{.Model}}</div>
           {{if or .Trim .Mileage}}

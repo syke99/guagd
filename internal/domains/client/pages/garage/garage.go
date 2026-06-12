@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"strings"
 	"unicode"
 
@@ -221,6 +222,29 @@ func (g *GarageClient) removeCar(ctx context.Context, ownerID, carID string) err
 	)
 }
 
+func (g *GarageClient) getCarPhotos(ctx context.Context, carID string) ([]CarPhoto, error) {
+	var photos []CarPhoto
+	err := g.db.Query(
+		ctx,
+		`SELECT id::text, car_id::text, object_key, is_primary
+		 FROM car_photos WHERE car_id = $1
+		 ORDER BY is_primary DESC, uploaded_at ASC`,
+		func(rows pgx.Rows) error {
+			for rows.Next() {
+				var p CarPhoto
+				if err := rows.Scan(&p.ID, &p.CarID, &p.ObjectKey, &p.IsPrimary); err != nil {
+					return err
+				}
+				p.URL = g.storage.CarPhotoURL(p.ObjectKey)
+				photos = append(photos, p)
+			}
+			return rows.Err()
+		},
+		carID,
+	)
+	return photos, err
+}
+
 func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKey string, isPrimary bool) (CarPhoto, error) {
 	var owned int
 	err := g.db.QueryRow(
@@ -260,15 +284,32 @@ func (g *GarageClient) addCarPhoto(ctx context.Context, ownerID, carID, objectKe
 }
 
 func (g *GarageClient) removeCarPhoto(ctx context.Context, ownerID, photoID string) error {
-	return g.db.Exec(
+	var objectKey string
+	err := g.db.QueryRow(
 		ctx,
 		`DELETE FROM car_photos
 		 USING cars
 		 WHERE car_photos.id = $1
 		   AND car_photos.car_id = cars.id
-		   AND cars.owner_id = $2`,
+		   AND cars.owner_id = $2
+		 RETURNING car_photos.object_key`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return nil
+			}
+			return rows.Scan(&objectKey)
+		},
 		photoID, ownerID,
 	)
+	if err != nil {
+		return err
+	}
+	if objectKey != "" {
+		if err := g.storage.DeleteCarPhoto(ctx, objectKey); err != nil {
+			log.Printf("removeCarPhoto: delete from R2: %s", err)
+		}
+	}
+	return nil
 }
 
 func (g *GarageClient) setCarPhotoPrimary(ctx context.Context, ownerID, carID, photoID string) error {

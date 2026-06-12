@@ -69,6 +69,22 @@ func (c *Client) AccountPhotoURL(key string) string {
 	return c.accountPhotos.PublicURL + "/" + key
 }
 
+func (c *Client) DeleteCarPhoto(ctx context.Context, key string) error {
+	return c.deleteObject(ctx, c.carPhotos.Name, key)
+}
+
+func (c *Client) DeleteAccountPhoto(ctx context.Context, key string) error {
+	return c.deleteObject(ctx, c.accountPhotos.Name, key)
+}
+
+func (c *Client) deleteObject(ctx context.Context, bucket, key string) error {
+	_, err := c.s3.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	return err
+}
+
 func (c *Client) presignPut(ctx context.Context, bucket, key, contentType string) (string, error) {
 	presigner := s3.NewPresignClient(c.s3)
 	req, err := presigner.PresignPutObject(ctx, &s3.PutObjectInput{
