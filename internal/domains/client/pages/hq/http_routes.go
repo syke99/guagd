@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-
 	"guagd/internal/pkg/css"
 	"guagd/internal/pkg/middleware"
 	"guagd/internal/pkg/models"
@@ -28,10 +25,7 @@ func (h *HQClient) HQPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionRequired := false
-	sessionContainer, _ := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
-		SessionRequired: &sessionRequired,
-	})
+	sessionContainer, _ := h.sessions.GetOptionalSession(r, w)
 
 	isAuthenticated := sessionContainer != nil
 	isOwner := isAuthenticated && sessionContainer.GetUserID() == user.SupertokensID
@@ -115,10 +109,7 @@ func (h *HQClient) SaveTheme(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HQClient) SearchMembers(w http.ResponseWriter, r *http.Request) {
-	sessionRequired := true
-	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
-		SessionRequired: &sessionRequired,
-	})
+	sessionContainer, err := h.sessions.GetSession(r, w)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -180,10 +171,7 @@ func (h *HQClient) ListMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HQClient) AddMember(w http.ResponseWriter, r *http.Request) {
-	sessionRequired := true
-	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
-		SessionRequired: &sessionRequired,
-	})
+	sessionContainer, err := h.sessions.GetSession(r, w)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -228,10 +216,7 @@ func (h *HQClient) AddMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HQClient) RemoveMember(w http.ResponseWriter, r *http.Request) {
-	sessionRequired := true
-	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
-		SessionRequired: &sessionRequired,
-	})
+	sessionContainer, err := h.sessions.GetSession(r, w)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return

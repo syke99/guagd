@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-
 	"guagd/internal/pkg/css"
 	"guagd/internal/pkg/middleware"
 	"guagd/internal/pkg/models"
@@ -27,10 +24,7 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionRequired := false
-	sessionContainer, _ := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
-		SessionRequired: &sessionRequired,
-	})
+	sessionContainer, _ := g.sessions.GetOptionalSession(r, w)
 
 	isAuthenticated := sessionContainer != nil
 	isOwner := isAuthenticated && sessionContainer.GetUserID() == user.SupertokensID

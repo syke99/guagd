@@ -13,6 +13,7 @@ import (
 	"guagd/internal/domains/client/pages/shared"
 	"guagd/internal/pkg/db"
 	"guagd/internal/pkg/models"
+	"guagd/internal/pkg/sessions"
 	"guagd/internal/pkg/storage"
 )
 
@@ -25,12 +26,13 @@ var garageTemplate = template.Must(
 )
 
 type GarageClient struct {
-	db      db.DB
-	storage *storage.Client
+	db       db.DB
+	storage  *storage.Client
+	sessions sessions.Getter
 }
 
-func NewGarageClient(db db.DB, store *storage.Client) *GarageClient {
-	return &GarageClient{db: db, storage: store}
+func NewGarageClient(db db.DB, store *storage.Client, sg sessions.Getter) *GarageClient {
+	return &GarageClient{db: db, storage: store, sessions: sg}
 }
 
 var defaultLayout = []models.LayoutItem{

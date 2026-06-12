@@ -11,6 +11,7 @@ import (
 	"guagd/internal/domains/client/pages/shared"
 	"guagd/internal/pkg/db"
 	"guagd/internal/pkg/models"
+	"guagd/internal/pkg/sessions"
 	"guagd/internal/pkg/storage"
 )
 
@@ -23,12 +24,13 @@ var hqTemplate = template.Must(
 )
 
 type HQClient struct {
-	db      db.DB
-	storage *storage.Client
+	db       db.DB
+	storage  *storage.Client
+	sessions sessions.Getter
 }
 
-func NewHQClient(db db.DB, store *storage.Client) *HQClient {
-	return &HQClient{db: db, storage: store}
+func NewHQClient(db db.DB, store *storage.Client, sg sessions.Getter) *HQClient {
+	return &HQClient{db: db, storage: store, sessions: sg}
 }
 
 var defaultLayout = []models.LayoutItem{

@@ -8,6 +8,7 @@ import (
 	"guagd/internal/domains/client/pages/garage"
 	"guagd/internal/domains/client/pages/hq"
 	"guagd/internal/pkg/db"
+	"guagd/internal/pkg/sessions"
 	"guagd/internal/pkg/storage"
 )
 
@@ -33,8 +34,8 @@ func NewClient(baseRoute string, publicURL string, db db.DB, store *storage.Clie
 		baseRoute: baseRoute,
 		publicURL: publicURL,
 		db:        db,
-		garage:    garage.NewGarageClient(db, store),
-		hq:        hq.NewHQClient(db, store),
+		garage:    garage.NewGarageClient(db, store, &sessions.SuperTokensGetter{}),
+		hq:        hq.NewHQClient(db, store, &sessions.SuperTokensGetter{}),
 	}
 }
 
