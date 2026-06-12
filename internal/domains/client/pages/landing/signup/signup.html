@@ -26,7 +26,9 @@
     <form hx-post="/api/v1/accounts/signup"
           hx-ext="json-enc"
           hx-target="#signup-result"
-          hx-swap="innerHTML">
+          hx-swap="innerHTML"
+          hx-on:htmx:before-request="const b=this.querySelector('[type=submit]');b.dataset.orig=b.innerHTML;b.innerHTML='<span class=btn-spinner></span>';b.disabled=true"
+          hx-on:htmx:after-request="const b=this.querySelector('[type=submit]');b.innerHTML=b.dataset.orig;b.disabled=false">
       <div class="signup-fields">
         <div class="acct-type-picker">
           <button type="button" class="acct-type-card acct-type-card--active" data-type="driver" onclick="selectAcctType('driver')">
