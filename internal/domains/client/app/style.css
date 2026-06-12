@@ -391,18 +391,33 @@ h1 em {
   color: var(--muted2);
 }
 
-.build-url span { color: var(--accent); font-weight: 500; }
+.build-url span {
+  color: var(--accent);
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 
 .copy-btn {
   font-size: 11px;
   font-weight: 600;
-  color: var(--muted);
-  background: var(--border2);
-  border: none;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
+  min-width: 58px;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.copy-btn.copied {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
 }
 
 .photo-strip {
@@ -1399,15 +1414,6 @@ footer span { font-size: 13px; color: var(--muted); }
     max-width: 100%;
   }
 
-  .build-url {
-    overflow: hidden;
-  }
-
-  .build-url span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 
   .capture {
     padding: 72px 20px;

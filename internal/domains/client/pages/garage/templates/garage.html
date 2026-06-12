@@ -439,6 +439,7 @@ function openCarModal(wrap) {
 
   renderCarModal(currentModalCar);
   document.getElementById('car-modal').style.display = 'flex';
+  history.replaceState(null, '', window.location.pathname + '?car=' + id.slice(0, 8));
 
   fetch('/api/v1/garage/cars/photos?car_id=' + id)
     .then(r => r.ok ? r.json() : [])
@@ -450,10 +451,19 @@ function openCarModal(wrap) {
     });
 }
 
+function copyCar(btn, shortId) {
+  navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?car=' + shortId);
+  btn.textContent = 'Copied!';
+  btn.classList.add('copied');
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); btn.disabled = false; }, 2000);
+}
+
 function closeCarModal() {
   document.getElementById('car-modal').style.display = 'none';
   activeCarId = null;
   currentModalCar = null;
+  history.replaceState(null, '', window.location.pathname);
 }
 
 function renderCarModal({id, year, make, model, trim, primaryURL, photos}) {
@@ -489,8 +499,8 @@ function renderCarModal({id, year, make, model, trim, primaryURL, photos}) {
       </div>
       <div style="padding:20px 0;color:var(--muted);font-size:13px;text-align:center;border-bottom:1px solid var(--border)">No mods documented yet.</div>
       <div class="build-url" style="margin:20px 0">
-        <span>gaugd.com/garage/@${currentUsername}</span>
-        <button class="copy-btn" onclick="navigator.clipboard.writeText(window.location.href)">Copy</button>
+        <span>${window.location.origin}${window.location.pathname}?car=${id.slice(0,8)}</span>
+        <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'${id.slice(0,8)}')">Copy</button>
       </div>
     </div>
     ${photoStrip}
@@ -696,6 +706,14 @@ function onCarPhotoAdded(carId, objectKey) {
       }
     });
 }
+
+(function() {
+  const carId = new URLSearchParams(window.location.search).get('car');
+  if (carId) {
+    const wrap = document.querySelector(`.car-card-wrap[data-id^="${carId}"]`);
+    if (wrap) openCarModal(wrap);
+  }
+})();
 </script>
 {{end}}
 
