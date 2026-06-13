@@ -424,6 +424,37 @@ h1 em {
   padding-bottom: 4px;
 }
 
+.build-tabs-container {
+  margin-top: 16px;
+}
+
+.build-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.build-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.build-tab:hover { color: var(--text); }
+.build-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.build-tab-content {
+  height: 85px;
+  overflow-y: auto;
+}
+
 .mod-empty {
   padding: 16px 0;
   color: var(--muted);
@@ -693,7 +724,7 @@ h1 em {
 .add-mod-wrap {
   padding: 12px 0 4px;
   border-top: 1px solid var(--border);
-  margin-top: 4px;
+  position: relative;
 }
 
 .add-mod-toggle-btn {
@@ -712,7 +743,15 @@ h1 em {
 .add-mod-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .add-mod-form {
-  margin-top: 12px;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
+  padding: 14px 0 10px;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 8px;

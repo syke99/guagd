@@ -510,6 +510,15 @@ function closeCarModal() {
   history.replaceState(null, '', window.location.pathname);
 }
 
+function switchBuildTab(carId, tab, btn) {
+  btn.closest('.build-tab-bar').querySelectorAll('.build-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('build-tab-mods-' + carId).style.display = tab === 'mods' ? '' : 'none';
+  document.getElementById('build-tab-maintenance-' + carId).style.display = tab === 'maintenance' ? '' : 'none';
+  const actions = document.getElementById('build-tab-actions-' + carId);
+  if (actions) actions.style.display = tab === 'mods' ? '' : 'none';
+}
+
 function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods}) {
   const canEdit = isOwner && editMode !== null;
 
@@ -541,7 +550,21 @@ function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods})
           <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
         </div>
       </div>
-      ${buildModList(id, mods, canEdit)}
+      <div class="build-tabs-container">
+        <div class="build-tab-bar">
+          <button class="build-tab active" onclick="switchBuildTab('${id}','mods',this)">Mods</button>
+          <button class="build-tab" onclick="switchBuildTab('${id}','maintenance',this)">Maintenance</button>
+        </div>
+        <div class="build-tab-content">
+          <div id="build-tab-mods-${id}" class="build-tab-panel">
+            ${buildModRows(id, mods, canEdit)}
+          </div>
+          <div id="build-tab-maintenance-${id}" class="build-tab-panel" style="display:none">
+            <div class="mod-empty" style="border-bottom:none">No maintenance records yet.</div>
+          </div>
+        </div>
+        ${canEdit ? `<div id="build-tab-actions-${id}">${buildModAddForm(id)}</div>` : ''}
+      </div>
       <div class="build-url" style="margin:20px 0">
         <span>${window.location.origin}${window.location.pathname}?car=${id.slice(0,8)}</span>
         <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'${id.slice(0,8)}')">Copy</button>
@@ -594,7 +617,7 @@ function formatModDate(dateStr) {
 function formatMileage(n) { return n ? n.toLocaleString() + ' mi' : ''; }
 function formatCost(n) { return n ? '$' + n.toLocaleString() : ''; }
 
-function buildModList(carId, mods, canEdit) {
+function buildModRows(carId, mods, canEdit) {
   let rows = '';
   if (!mods) {
     rows = `<div class="mod-empty">Loading...</div>`;
@@ -630,9 +653,12 @@ function buildModList(carId, mods, canEdit) {
       </div>`;
     }).join('');
   }
+  return `<div class="mod-list-section">${rows}</div>`;
+}
 
+function buildModAddForm(carId) {
   const catOptions = MOD_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-  const addForm = canEdit ? `
+  return `
     <div class="add-mod-wrap">
       <button class="add-mod-toggle-btn" onclick="toggleAddMod('${carId}')">+ Add Mod</button>
       <div id="add-mod-form-${carId}" class="add-mod-form" style="display:none">
@@ -658,9 +684,7 @@ function buildModList(carId, mods, canEdit) {
         </div>
       </div>
     </div>
-  ` : '';
-
-  return `<div class="mod-list-section">${rows}${addForm}</div>`;
+  `;
 }
 
 function toggleAddMod(carId) {
