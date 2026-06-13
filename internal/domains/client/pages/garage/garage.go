@@ -349,7 +349,7 @@ func (g *GarageClient) getMods(ctx context.Context, carID string) ([]models.Mod,
 		        COALESCE(cm.notes, '')               AS notes,
 		        COUNT(mu.id)                         AS upload_count
 		 FROM car_mods cm
-		 LEFT JOIN mod_uploads mu ON mu.mod_id = cm.id
+		 LEFT JOIN car_uploads mu ON mu.mod_id = cm.id
 		 WHERE cm.car_id = $1
 		 GROUP BY cm.id
 		 ORDER BY cm.created_at ASC`,
@@ -359,21 +359,21 @@ func (g *GarageClient) getMods(ctx context.Context, carID string) ([]models.Mod,
 	return mods, err
 }
 
-func (g *GarageClient) getModUploads(ctx context.Context, modID string) ([]models.ModUpload, error) {
-	var uploads []models.ModUpload
+func (g *GarageClient) getCarUploads(ctx context.Context, modID string) ([]models.CarUpload, error) {
+	var uploads []models.CarUpload
 	err := g.db.Query(ctx,
 		`SELECT id::text, mod_id::text AS mod_id, object_key, name, upload_type, content_type
-		 FROM mod_uploads WHERE mod_id = $1 ORDER BY uploaded_at ASC`,
+		 FROM car_uploads WHERE mod_id = $1 ORDER BY uploaded_at ASC`,
 		db.WithResultsOf(&uploads),
 		modID,
 	)
 	for i := range uploads {
-		uploads[i].URL = g.storage.ModFileURL(uploads[i].ObjectKey)
+		uploads[i].URL = g.storage.CarFileURL(uploads[i].ObjectKey)
 	}
 	return uploads, err
 }
 
-func (g *GarageClient) addModUpload(ctx context.Context, accountID, modID, objectKey, name, uploadType, contentType string) (models.ModUpload, error) {
+func (g *GarageClient) addCarUpload(ctx context.Context, accountID, modID, objectKey, name, uploadType, contentType string) (models.CarUpload, error) {
 	var owned int
 	err := g.db.QueryRow(ctx,
 		`SELECT COUNT(*) FROM car_mods cm
@@ -388,27 +388,27 @@ func (g *GarageClient) addModUpload(ctx context.Context, accountID, modID, objec
 		modID, accountID,
 	)
 	if err != nil || owned == 0 {
-		return models.ModUpload{}, fmt.Errorf("mod not found")
+		return models.CarUpload{}, fmt.Errorf("mod not found")
 	}
 
-	var upload models.ModUpload
+	var upload models.CarUpload
 	err = g.db.QueryRow(ctx,
-		`INSERT INTO mod_uploads (mod_id, object_key, name, upload_type, content_type)
+		`INSERT INTO car_uploads (mod_id, object_key, name, upload_type, content_type)
 		 VALUES ($1::uuid, $2, $3, $4, $5)
 		 RETURNING id::text, mod_id::text AS mod_id, object_key, name, upload_type, content_type`,
 		db.WithResultOf(&upload),
 		modID, objectKey, name, uploadType, contentType,
 	)
 	if err == nil {
-		upload.URL = g.storage.ModFileURL(upload.ObjectKey)
+		upload.URL = g.storage.CarFileURL(upload.ObjectKey)
 	}
 	return upload, err
 }
 
-func (g *GarageClient) removeModUpload(ctx context.Context, accountID, uploadID string) error {
+func (g *GarageClient) removeCarUpload(ctx context.Context, accountID, uploadID string) error {
 	var objectKey string
 	err := g.db.QueryRow(ctx,
-		`DELETE FROM mod_uploads
+		`DELETE FROM car_uploads
 		 WHERE id = $1::uuid
 		   AND mod_id IN (
 		     SELECT cm.id FROM car_mods cm
@@ -428,8 +428,8 @@ func (g *GarageClient) removeModUpload(ctx context.Context, accountID, uploadID 
 		return err
 	}
 	if objectKey != "" {
-		if err := g.storage.DeleteModFile(ctx, objectKey); err != nil {
-			log.Printf("removeModUpload: delete from R2: %s", err)
+		if err := g.storage.DeleteCarFile(ctx, objectKey); err != nil {
+			log.Printf("removeCarUpload: delete from R2: %s", err)
 		}
 	}
 	return nil

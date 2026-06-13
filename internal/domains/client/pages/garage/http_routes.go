@@ -409,26 +409,26 @@ func (g *GarageClient) RemoveCarMod(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (g *GarageClient) GetModUploads(w http.ResponseWriter, r *http.Request) {
+func (g *GarageClient) GetCarUploads(w http.ResponseWriter, r *http.Request) {
 	modID := r.URL.Query().Get("mod_id")
 	if modID == "" {
 		http.Error(w, "mod_id required", http.StatusBadRequest)
 		return
 	}
-	uploads, err := g.getModUploads(r.Context(), modID)
+	uploads, err := g.getCarUploads(r.Context(), modID)
 	if err != nil {
-		log.Printf("getModUploads: %s", err)
+		log.Printf("getCarUploads: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	if uploads == nil {
-		uploads = []models.ModUpload{}
+		uploads = []models.CarUpload{}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(uploads)
 }
 
-func (g *GarageClient) AddModUpload(w http.ResponseWriter, r *http.Request) {
+func (g *GarageClient) AddCarUpload(w http.ResponseWriter, r *http.Request) {
 	modID := r.URL.Query().Get("mod_id")
 	if modID == "" {
 		http.Error(w, "mod_id required", http.StatusBadRequest)
@@ -455,9 +455,9 @@ func (g *GarageClient) AddModUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
 		return
 	}
-	upload, err := g.addModUpload(r.Context(), id, modID, body.ObjectKey, body.Name, body.UploadType, body.ContentType)
+	upload, err := g.addCarUpload(r.Context(), id, modID, body.ObjectKey, body.Name, body.UploadType, body.ContentType)
 	if err != nil {
-		log.Printf("addModUpload: %s", err)
+		log.Printf("addCarUpload: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -465,7 +465,7 @@ func (g *GarageClient) AddModUpload(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(upload)
 }
 
-func (g *GarageClient) RemoveModUpload(w http.ResponseWriter, r *http.Request) {
+func (g *GarageClient) RemoveCarUpload(w http.ResponseWriter, r *http.Request) {
 	uploadID := r.URL.Query().Get("upload_id")
 	if uploadID == "" {
 		http.Error(w, "upload_id required", http.StatusBadRequest)
@@ -476,8 +476,8 @@ func (g *GarageClient) RemoveModUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
 		return
 	}
-	if err := g.removeModUpload(r.Context(), id, uploadID); err != nil {
-		log.Printf("removeModUpload: %s", err)
+	if err := g.removeCarUpload(r.Context(), id, uploadID); err != nil {
+		log.Printf("removeCarUpload: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}

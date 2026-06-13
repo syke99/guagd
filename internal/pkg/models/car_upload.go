@@ -1,6 +1,6 @@
 package models
 
-type ModUpload struct {
+type CarUpload struct {
 	ID          string `json:"id"           db:"id"`
 	ModID       string `json:"mod_id"       db:"mod_id"`
 	ObjectKey   string `json:"object_key"   db:"object_key"`

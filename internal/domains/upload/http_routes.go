@@ -17,7 +17,7 @@ var photoContentTypes = map[string]string{
 	"image/webp": "webp",
 }
 
-var modFileContentTypes = map[string]string{
+var carFileContentTypes = map[string]string{
 	"image/jpeg":      "jpg",
 	"image/png":       "png",
 	"image/webp":      "webp",
@@ -35,15 +35,15 @@ func (u *UploadClient) Presign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch body.EntityType {
-	case "car", "account", "mod":
+	case "car", "account", "car_file":
 	default:
-		http.Error(w, "entity_type must be 'car', 'account', or 'mod'", http.StatusBadRequest)
+		http.Error(w, "entity_type must be 'car', 'account', or 'car_file'", http.StatusBadRequest)
 		return
 	}
 
 	allowedTypes := photoContentTypes
-	if body.EntityType == "mod" {
-		allowedTypes = modFileContentTypes
+	if body.EntityType == "car_file" {
+		allowedTypes = carFileContentTypes
 	}
 
 	ext, ok := allowedTypes[body.ContentType]
@@ -64,8 +64,8 @@ func (u *UploadClient) Presign(w http.ResponseWriter, r *http.Request) {
 		uploadURL, err = u.storage.PresignCarPhotoUpload(r.Context(), objectKey, body.ContentType)
 	case "account":
 		uploadURL, err = u.storage.PresignAccountPhotoUpload(r.Context(), objectKey, body.ContentType)
-	case "mod":
-		uploadURL, err = u.storage.PresignModFileUpload(r.Context(), objectKey, body.ContentType)
+	case "car_file":
+		uploadURL, err = u.storage.PresignCarFileUpload(r.Context(), objectKey, body.ContentType)
 	}
 	if err != nil {
 		log.Printf("presign: %s", err)

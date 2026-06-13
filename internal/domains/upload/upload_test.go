@@ -109,7 +109,7 @@ func TestPhotoContentTypesMap(t *testing.T) {
 	}
 }
 
-func TestModFileContentTypesMap(t *testing.T) {
+func TestCarFileContentTypesMap(t *testing.T) {
 	expected := map[string]string{
 		"image/jpeg":      "jpg",
 		"image/png":       "png",
@@ -117,16 +117,16 @@ func TestModFileContentTypesMap(t *testing.T) {
 		"application/pdf": "pdf",
 	}
 	for ct, ext := range expected {
-		if got, ok := modFileContentTypes[ct]; !ok || got != ext {
-			t.Errorf("modFileContentTypes[%q] = %q, want %q", ct, got, ext)
+		if got, ok := carFileContentTypes[ct]; !ok || got != ext {
+			t.Errorf("carFileContentTypes[%q] = %q, want %q", ct, got, ext)
 		}
 	}
-	if len(modFileContentTypes) != len(expected) {
+	if len(carFileContentTypes) != len(expected) {
 		var buf bytes.Buffer
-		for k := range modFileContentTypes {
+		for k := range carFileContentTypes {
 			buf.WriteString(k)
 			buf.WriteString(" ")
 		}
-		t.Errorf("unexpected extra entries in modFileContentTypes: %s", buf.String())
+		t.Errorf("unexpected extra entries in carFileContentTypes: %s", buf.String())
 	}
 }

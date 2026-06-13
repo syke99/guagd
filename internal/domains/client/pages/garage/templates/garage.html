@@ -521,6 +521,7 @@ function switchBuildTab(carId, tab, btn) {
 
 function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods}) {
   const canEdit = isOwner && editMode !== null;
+  const canManageMods = isOwner;
 
   const coverClick = canEdit
     ? `onclick="openUploadModal({entityType:'car',carId:'${id}',isPrimary:true,title:'${primaryURL ? 'Replace' : 'Add'} Cover Photo',confirm:confirmCarCover,onSuccess:key=>updateCarCover('${id}',key)})" style="cursor:pointer"`
@@ -557,13 +558,13 @@ function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods})
         </div>
         <div class="build-tab-content">
           <div id="build-tab-mods-${id}" class="build-tab-panel">
-            ${buildModRows(id, mods, canEdit)}
+            ${buildModRows(id, mods, canManageMods)}
           </div>
           <div id="build-tab-maintenance-${id}" class="build-tab-panel" style="display:none">
             <div class="mod-empty" style="border-bottom:none">No maintenance records yet.</div>
           </div>
         </div>
-        ${canEdit ? `<div id="build-tab-actions-${id}">${buildModAddForm(id)}</div>` : ''}
+        ${canManageMods ? `<div id="build-tab-actions-${id}">${buildModAddForm(id)}</div>` : ''}
       </div>
       <div class="build-url" style="margin:20px 0">
         <span>${window.location.origin}${window.location.pathname}?car=${id.slice(0,8)}</span>
@@ -793,7 +794,7 @@ async function submitModUpload() {
     const presignRes = await fetch('/api/v1/upload/presign', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({entity_type: 'mod', content_type: file.type}),
+      body: JSON.stringify({entity_type: 'car_file', content_type: file.type}),
     });
     if (!presignRes.ok) throw new Error('Could not get upload URL');
     const {upload_url, object_key} = await presignRes.json();
@@ -850,7 +851,7 @@ function renderModUploadsViewer(modId, uploads) {
       </div>
       <div class="mod-upload-viewer-actions">
         <a href="${escHtml(u.url)}" target="_blank" rel="noopener" class="btn-nav mod-upload-view-btn">View</a>
-        ${isOwner ? `<button class="mod-remove-btn" onclick="deleteModUpload(${u.id},'${escHtml(modId)}')">✕</button>` : ''}
+        ${isOwner ? `<button class="mod-remove-btn" onclick="deleteModUpload('${escHtml(u.id)}','${escHtml(modId)}')">✕</button>` : ''}
       </div>
     </div>
   `).join('');

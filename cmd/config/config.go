@@ -32,8 +32,8 @@ type Config struct {
 	R2CarPhotosBucketName          string `json:"R2_CAR_PHOTOS_BUCKET_NAME"         yaml:"R2_CAR_PHOTOS_BUCKET_NAME"         env:"R2_CAR_PHOTOS_BUCKET_NAME"`
 	R2AccountPhotosBucketPublicURL string `json:"R2_ACCOUNT_PHOTOS_BUCKET_PUBLIC_URL" yaml:"R2_ACCOUNT_PHOTOS_BUCKET_PUBLIC_URL" env:"R2_ACCOUNT_PHOTOS_BUCKET_PUBLIC_URL"`
 	R2CarPhotosBucketPublicURL     string `json:"R2_CAR_PHOTOS_BUCKET_PUBLIC_URL"    yaml:"R2_CAR_PHOTOS_BUCKET_PUBLIC_URL"    env:"R2_CAR_PHOTOS_BUCKET_PUBLIC_URL"`
-	R2ModFilesBucketName           string `json:"R2_MOD_FILES_BUCKET_NAME"           yaml:"R2_MOD_FILES_BUCKET_NAME"           env:"R2_MOD_FILES_BUCKET_NAME"`
-	R2ModFilesBucketPublicURL      string `json:"R2_MOD_FILES_BUCKET_PUBLIC_URL"     yaml:"R2_MOD_FILES_BUCKET_PUBLIC_URL"     env:"R2_MOD_FILES_BUCKET_PUBLIC_URL"`
+	R2CarFilesBucketName           string `json:"R2_CAR_FILES_BUCKET_NAME"           yaml:"R2_CAR_FILES_BUCKET_NAME"           env:"R2_CAR_FILES_BUCKET_NAME"`
+	R2CarFilesBucketPublicURL      string `json:"R2_CAR_FILES_BUCKET_PUBLIC_URL"     yaml:"R2_CAR_FILES_BUCKET_PUBLIC_URL"     env:"R2_CAR_FILES_BUCKET_PUBLIC_URL"`
 }
 
 type LoadOption func(*loadOptions)

@@ -17,7 +17,7 @@ type Config struct {
 	SecretAccessKey string
 	CarPhotos       BucketConfig
 	AccountPhotos   BucketConfig
-	ModFiles        BucketConfig
+	CarFiles        BucketConfig
 }
 
 type BucketConfig struct {
@@ -29,7 +29,7 @@ type Client struct {
 	s3            *s3.Client
 	carPhotos     BucketConfig
 	accountPhotos BucketConfig
-	modFiles      BucketConfig
+	carFiles      BucketConfig
 }
 
 func New(cfg Config) (*Client, error) {
@@ -52,7 +52,7 @@ func New(cfg Config) (*Client, error) {
 		s3:            s3Client,
 		carPhotos:     cfg.CarPhotos,
 		accountPhotos: cfg.AccountPhotos,
-		modFiles:      cfg.ModFiles,
+		carFiles:      cfg.CarFiles,
 	}, nil
 }
 
@@ -80,16 +80,16 @@ func (c *Client) DeleteAccountPhoto(ctx context.Context, key string) error {
 	return c.deleteObject(ctx, c.accountPhotos.Name, key)
 }
 
-func (c *Client) PresignModFileUpload(ctx context.Context, key, contentType string) (string, error) {
-	return c.presignPut(ctx, c.modFiles.Name, key, contentType)
+func (c *Client) PresignCarFileUpload(ctx context.Context, key, contentType string) (string, error) {
+	return c.presignPut(ctx, c.carFiles.Name, key, contentType)
 }
 
-func (c *Client) ModFileURL(key string) string {
-	return c.modFiles.PublicURL + "/" + key
+func (c *Client) CarFileURL(key string) string {
+	return c.carFiles.PublicURL + "/" + key
 }
 
-func (c *Client) DeleteModFile(ctx context.Context, key string) error {
-	return c.deleteObject(ctx, c.modFiles.Name, key)
+func (c *Client) DeleteCarFile(ctx context.Context, key string) error {
+	return c.deleteObject(ctx, c.carFiles.Name, key)
 }
 
 func (c *Client) deleteObject(ctx context.Context, bucket, key string) error {
