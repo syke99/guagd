@@ -11,10 +11,17 @@ import (
 	"guagd/internal/pkg/middleware"
 )
 
-var allowedContentTypes = map[string]string{
+var photoContentTypes = map[string]string{
 	"image/jpeg": "jpg",
 	"image/png":  "png",
 	"image/webp": "webp",
+}
+
+var modFileContentTypes = map[string]string{
+	"image/jpeg":      "jpg",
+	"image/png":       "png",
+	"image/webp":      "webp",
+	"application/pdf": "pdf",
 }
 
 func (u *UploadClient) Presign(w http.ResponseWriter, r *http.Request) {
@@ -27,14 +34,21 @@ func (u *UploadClient) Presign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ext, ok := allowedContentTypes[body.ContentType]
-	if !ok {
-		http.Error(w, "unsupported content type", http.StatusBadRequest)
+	switch body.EntityType {
+	case "car", "account", "mod":
+	default:
+		http.Error(w, "entity_type must be 'car', 'account', or 'mod'", http.StatusBadRequest)
 		return
 	}
 
-	if body.EntityType != "car" && body.EntityType != "account" {
-		http.Error(w, "entity_type must be 'car' or 'account'", http.StatusBadRequest)
+	allowedTypes := photoContentTypes
+	if body.EntityType == "mod" {
+		allowedTypes = modFileContentTypes
+	}
+
+	ext, ok := allowedTypes[body.ContentType]
+	if !ok {
+		http.Error(w, "unsupported content type", http.StatusBadRequest)
 		return
 	}
 
@@ -50,6 +64,8 @@ func (u *UploadClient) Presign(w http.ResponseWriter, r *http.Request) {
 		uploadURL, err = u.storage.PresignCarPhotoUpload(r.Context(), objectKey, body.ContentType)
 	case "account":
 		uploadURL, err = u.storage.PresignAccountPhotoUpload(r.Context(), objectKey, body.ContentType)
+	case "mod":
+		uploadURL, err = u.storage.PresignModFileUpload(r.Context(), objectKey, body.ContentType)
 	}
 	if err != nil {
 		log.Printf("presign: %s", err)

@@ -88,22 +88,45 @@ func TestPresign_ValidEntityTypes(t *testing.T) {
 	}
 }
 
-func TestAllowedContentTypesMap(t *testing.T) {
+func TestPhotoContentTypesMap(t *testing.T) {
 	expected := map[string]string{
 		"image/jpeg": "jpg",
 		"image/png":  "png",
 		"image/webp": "webp",
 	}
 	for ct, ext := range expected {
-		if got, ok := allowedContentTypes[ct]; !ok || got != ext {
-			t.Errorf("allowedContentTypes[%q] = %q, want %q", ct, got, ext)
+		if got, ok := photoContentTypes[ct]; !ok || got != ext {
+			t.Errorf("photoContentTypes[%q] = %q, want %q", ct, got, ext)
 		}
 	}
-	if len(allowedContentTypes) != len(expected) {
+	if len(photoContentTypes) != len(expected) {
 		var buf bytes.Buffer
-		for k := range allowedContentTypes {
-			buf.WriteString(k + " ")
+		for k := range photoContentTypes {
+			buf.WriteString(k)
+			buf.WriteString(" ")
 		}
-		t.Errorf("unexpected extra entries in allowedContentTypes: %s", buf.String())
+		t.Errorf("unexpected extra entries in photoContentTypes: %s", buf.String())
+	}
+}
+
+func TestModFileContentTypesMap(t *testing.T) {
+	expected := map[string]string{
+		"image/jpeg":      "jpg",
+		"image/png":       "png",
+		"image/webp":      "webp",
+		"application/pdf": "pdf",
+	}
+	for ct, ext := range expected {
+		if got, ok := modFileContentTypes[ct]; !ok || got != ext {
+			t.Errorf("modFileContentTypes[%q] = %q, want %q", ct, got, ext)
+		}
+	}
+	if len(modFileContentTypes) != len(expected) {
+		var buf bytes.Buffer
+		for k := range modFileContentTypes {
+			buf.WriteString(k)
+			buf.WriteString(" ")
+		}
+		t.Errorf("unexpected extra entries in modFileContentTypes: %s", buf.String())
 	}
 }

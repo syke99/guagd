@@ -58,6 +58,10 @@ func main() {
 					Name:      cfg.R2AccountPhotosBucketName,
 					PublicURL: cfg.R2AccountPhotosBucketPublicURL,
 				},
+				ModFiles: storage.BucketConfig{
+					Name:      cfg.R2ModFilesBucketName,
+					PublicURL: cfg.R2ModFilesBucketPublicURL,
+				},
 			})
 			if err != nil {
 				return err

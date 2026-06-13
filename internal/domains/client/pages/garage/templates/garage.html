@@ -88,6 +88,49 @@ border-radius: 16px;"></textarea>
   </div>
 </div>
 
+<!-- Mod file upload modal -->
+<div id="mod-upload-modal" class="modal-overlay" style="display:none;z-index:700" onclick="if(event.target===this)closeModUploadModal()">
+  <div class="mod-upload-modal-inner">
+    <div class="mod-upload-modal-header">
+      <div class="mod-upload-modal-title">Add Document</div>
+      <button class="modal-close-btn" onclick="closeModUploadModal()">✕</button>
+    </div>
+    <input type="text" id="mod-upload-name" class="mod-upload-field" placeholder="Document name *" autocomplete="off">
+    <select id="mod-upload-type" class="mod-upload-field">
+      <option value="Receipt">Receipt</option>
+      <option value="Invoice">Invoice</option>
+      <option value="Dyno Sheet">Dyno Sheet</option>
+      <option value="Alignment Sheet">Alignment Sheet</option>
+      <option value="Warranty">Warranty</option>
+      <option value="Other">Other</option>
+    </select>
+    <div class="mod-upload-file-area" id="mod-upload-file-area" onclick="document.getElementById('mod-upload-file-input').click()">
+      <div id="mod-upload-file-placeholder" class="mod-upload-file-placeholder">
+        <div class="mod-upload-file-icon">📄</div>
+        <div>Drop a file or <span class="upload-link">browse</span></div>
+        <div class="mod-upload-hint">JPEG, PNG, WebP, or PDF · max 10 MB</div>
+      </div>
+      <div id="mod-upload-file-chosen" style="display:none" class="mod-upload-file-chosen">
+        <span id="mod-upload-file-name-display"></span>
+      </div>
+    </div>
+    <input type="file" id="mod-upload-file-input" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none">
+    <button class="btn-primary" id="mod-upload-submit-btn" disabled style="width:100%;margin-top:12px" onclick="submitModUpload()">Upload</button>
+    <div id="mod-upload-status" class="upload-status" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- Mod uploads viewer modal -->
+<div id="mod-uploads-viewer" class="modal-overlay" style="display:none;z-index:700" onclick="if(event.target===this)closeModUploadsViewer()">
+  <div class="mod-upload-modal-inner">
+    <div class="mod-upload-modal-header">
+      <div class="mod-upload-modal-title" id="mod-uploads-viewer-title">Documents</div>
+      <button class="modal-close-btn" onclick="closeModUploadsViewer()">✕</button>
+    </div>
+    <div id="mod-uploads-viewer-list"></div>
+  </div>
+</div>
+
 <script>
 const isOwner = {{if .IsOwner}}true{{else}}false{{end}};
 const currentUsername = '{{.Username}}';
@@ -560,6 +603,15 @@ function buildModList(carId, mods, canEdit) {
   } else {
     rows = mods.map(m => {
       const meta = [formatModDate(m.install_date), formatMileage(m.mileage_at_install), formatCost(m.cost)].filter(Boolean).join(' · ');
+      const uploadCount = m.upload_count || 0;
+      const trustLevel = uploadCount > 0 ? 'documented' : 'reported';
+      const trustLabel = trustLevel === 'documented' ? 'Documented' : 'Reported';
+      const clipIcon = uploadCount > 0
+        ? `<button class="mod-clip-btn" title="${uploadCount} document${uploadCount !== 1 ? 's' : ''}" onclick="openModUploadsViewer('${escHtml(m.id)}','${escHtml(m.name)}')">📎<span class="mod-clip-count">${uploadCount}</span></button>`
+        : '';
+      const uploadBtn = canEdit
+        ? `<button class="mod-upload-btn" title="Add document" onclick="openModUploadModal('${escHtml(m.id)}')">⬆</button>`
+        : '';
       const removeBtn = canEdit
         ? `<button class="mod-remove-btn" onclick="removeCarMod('${escHtml(m.id)}','${carId}')">✕</button>`
         : '';
@@ -568,11 +620,13 @@ function buildModList(carId, mods, canEdit) {
           <div class="mod-entry-top">
             <span class="mod-category-badge">${escHtml(m.category)}</span>
             <span class="mod-name">${escHtml(m.name)}</span>
+            ${clipIcon}
+            <span class="trust-badge trust-badge--${trustLevel}" data-tooltip="coming soon: shop verification!">${trustLabel}</span>
           </div>
           ${meta ? `<div class="mod-meta">${meta}</div>` : ''}
           ${m.notes ? `<div class="mod-notes">${escHtml(m.notes)}</div>` : ''}
         </div>
-        ${removeBtn}
+        <div class="mod-row-actions">${uploadBtn}${removeBtn}</div>
       </div>`;
     }).join('');
   }
@@ -643,6 +697,160 @@ async function removeCarMod(modId, carId) {
   if (!res.ok) return;
   currentModalCar = Object.assign({}, currentModalCar, {mods: (currentModalCar.mods || []).filter(m => m.id !== modId)});
   renderCarModal(currentModalCar);
+}
+
+// --- Mod uploads ---
+
+let modUploadCtx = null;
+
+function openModUploadModal(modId) {
+  modUploadCtx = {modId};
+  document.getElementById('mod-upload-name').value = '';
+  document.getElementById('mod-upload-type').value = 'Receipt';
+  clearModUploadFile();
+  document.getElementById('mod-upload-status').textContent = '';
+  document.getElementById('mod-upload-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('mod-upload-name').focus(), 50);
+}
+
+function closeModUploadModal() {
+  document.getElementById('mod-upload-modal').style.display = 'none';
+  modUploadCtx = null;
+}
+
+function clearModUploadFile() {
+  const input = document.getElementById('mod-upload-file-input');
+  if (input) input.value = '';
+  document.getElementById('mod-upload-file-placeholder').style.display = '';
+  document.getElementById('mod-upload-file-chosen').style.display = 'none';
+  document.getElementById('mod-upload-submit-btn').disabled = true;
+}
+
+document.getElementById('mod-upload-file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) { clearModUploadFile(); return; }
+  document.getElementById('mod-upload-file-placeholder').style.display = 'none';
+  document.getElementById('mod-upload-file-chosen').style.display = 'flex';
+  document.getElementById('mod-upload-file-name-display').textContent = file.name;
+  document.getElementById('mod-upload-submit-btn').disabled = false;
+});
+
+(function() {
+  const area = document.getElementById('mod-upload-file-area');
+  const fileInput = document.getElementById('mod-upload-file-input');
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
+  area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
+  area.addEventListener('drop', e => {
+    e.preventDefault();
+    area.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    fileInput.dispatchEvent(new Event('change'));
+  });
+})();
+
+async function submitModUpload() {
+  if (!modUploadCtx) return;
+  const name = document.getElementById('mod-upload-name').value.trim();
+  if (!name) { document.getElementById('mod-upload-name').focus(); return; }
+  const uploadType = document.getElementById('mod-upload-type').value;
+  const file = document.getElementById('mod-upload-file-input').files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('mod-upload-status');
+  const btn = document.getElementById('mod-upload-submit-btn');
+  btn.disabled = true;
+  statusEl.textContent = 'Uploading…';
+
+  try {
+    const presignRes = await fetch('/api/v1/upload/presign', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({entity_type: 'mod', content_type: file.type}),
+    });
+    if (!presignRes.ok) throw new Error('Could not get upload URL');
+    const {upload_url, object_key} = await presignRes.json();
+
+    const putRes = await fetch(upload_url, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+    if (!putRes.ok) throw new Error('File upload failed');
+
+    const saveRes = await fetch('/api/v1/garage/cars/mods/uploads/add?mod_id=' + modUploadCtx.modId, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({object_key, name, upload_type: uploadType, content_type: file.type}),
+    });
+    if (!saveRes.ok) throw new Error('Failed to save document');
+
+    const modId = modUploadCtx.modId;
+    closeModUploadModal();
+    currentModalCar = Object.assign({}, currentModalCar, {
+      mods: (currentModalCar.mods || []).map(m =>
+        m.id === modId ? Object.assign({}, m, {upload_count: (m.upload_count || 0) + 1}) : m
+      ),
+    });
+    renderCarModal(currentModalCar);
+  } catch (err) {
+    statusEl.textContent = err.message || 'Upload failed';
+    btn.disabled = false;
+  }
+}
+
+async function openModUploadsViewer(modId, modName) {
+  document.getElementById('mod-uploads-viewer-title').textContent = escHtml(modName) + ' — Documents';
+  document.getElementById('mod-uploads-viewer-list').innerHTML = '<div class="mod-empty">Loading…</div>';
+  document.getElementById('mod-uploads-viewer').style.display = 'flex';
+
+  try {
+    const res = await fetch('/api/v1/garage/cars/mods/uploads?mod_id=' + modId);
+    const uploads = res.ok ? await res.json() : [];
+    renderModUploadsViewer(modId, uploads);
+  } catch {
+    document.getElementById('mod-uploads-viewer-list').innerHTML = '<div class="mod-empty">Failed to load documents.</div>';
+  }
+}
+
+function renderModUploadsViewer(modId, uploads) {
+  const listEl = document.getElementById('mod-uploads-viewer-list');
+  if (!uploads || uploads.length === 0) {
+    listEl.innerHTML = '<div class="mod-empty">No documents yet.</div>';
+    return;
+  }
+  listEl.innerHTML = uploads.map(u => `
+    <div class="mod-upload-viewer-row">
+      <div class="mod-upload-viewer-info">
+        <span class="mod-upload-viewer-name">${escHtml(u.name)}</span>
+        <span class="mod-upload-viewer-type">${escHtml(u.upload_type)}</span>
+      </div>
+      <div class="mod-upload-viewer-actions">
+        <a href="${escHtml(u.url)}" target="_blank" rel="noopener" class="btn-nav mod-upload-view-btn">View</a>
+        ${isOwner ? `<button class="mod-remove-btn" onclick="deleteModUpload(${u.id},'${escHtml(modId)}')">✕</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function closeModUploadsViewer() {
+  document.getElementById('mod-uploads-viewer').style.display = 'none';
+}
+
+async function deleteModUpload(uploadId, modId) {
+  const res = await fetch('/api/v1/garage/cars/mods/uploads/remove?upload_id=' + uploadId, {method: 'DELETE'});
+  if (!res.ok) return;
+  currentModalCar = Object.assign({}, currentModalCar, {
+    mods: (currentModalCar.mods || []).map(m =>
+      m.id === modId ? Object.assign({}, m, {upload_count: Math.max(0, (m.upload_count || 0) - 1)}) : m
+    ),
+  });
+  renderCarModal(currentModalCar);
+  const viewerModal = document.getElementById('mod-uploads-viewer');
+  if (viewerModal.style.display !== 'none') {
+    const res2 = await fetch('/api/v1/garage/cars/mods/uploads?mod_id=' + modId);
+    const uploads = res2.ok ? await res2.json() : [];
+    renderModUploadsViewer(modId, uploads);
+  }
 }
 
 async function confirmCarPhoto(objectKey) {

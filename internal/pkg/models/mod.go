@@ -9,4 +9,5 @@ type Mod struct {
 	MileageAtInstall int    `json:"mileage_at_install" db:"mileage_at_install"`
 	Cost             int    `json:"cost"               db:"cost"`
 	Notes            string `json:"notes"              db:"notes"`
+	UploadCount      int    `json:"upload_count"       db:"upload_count"`
 }

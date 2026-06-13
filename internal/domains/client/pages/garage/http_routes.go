@@ -408,3 +408,78 @@ func (g *GarageClient) RemoveCarMod(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (g *GarageClient) GetModUploads(w http.ResponseWriter, r *http.Request) {
+	modID := r.URL.Query().Get("mod_id")
+	if modID == "" {
+		http.Error(w, "mod_id required", http.StatusBadRequest)
+		return
+	}
+	uploads, err := g.getModUploads(r.Context(), modID)
+	if err != nil {
+		log.Printf("getModUploads: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if uploads == nil {
+		uploads = []models.ModUpload{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(uploads)
+}
+
+func (g *GarageClient) AddModUpload(w http.ResponseWriter, r *http.Request) {
+	modID := r.URL.Query().Get("mod_id")
+	if modID == "" {
+		http.Error(w, "mod_id required", http.StatusBadRequest)
+		return
+	}
+	var body struct {
+		ObjectKey   string `json:"object_key"`
+		Name        string `json:"name"`
+		UploadType  string `json:"upload_type"`
+		ContentType string `json:"content_type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.ObjectKey) == "" || strings.TrimSpace(body.Name) == "" {
+		http.Error(w, "object_key and name required", http.StatusBadRequest)
+		return
+	}
+	if body.UploadType == "" {
+		body.UploadType = "Receipt"
+	}
+	if body.ContentType == "" {
+		body.ContentType = "application/octet-stream"
+	}
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	upload, err := g.addModUpload(r.Context(), id, modID, body.ObjectKey, body.Name, body.UploadType, body.ContentType)
+	if err != nil {
+		log.Printf("addModUpload: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(upload)
+}
+
+func (g *GarageClient) RemoveModUpload(w http.ResponseWriter, r *http.Request) {
+	uploadID := r.URL.Query().Get("upload_id")
+	if uploadID == "" {
+		http.Error(w, "upload_id required", http.StatusBadRequest)
+		return
+	}
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.removeModUpload(r.Context(), id, uploadID); err != nil {
+		log.Printf("removeModUpload: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

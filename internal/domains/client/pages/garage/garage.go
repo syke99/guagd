@@ -339,20 +339,100 @@ func (g *GarageClient) removeCoverPhoto(ctx context.Context, accountID string) e
 func (g *GarageClient) getMods(ctx context.Context, carID string) ([]models.Mod, error) {
 	var mods []models.Mod
 	err := g.db.Query(ctx,
-		`SELECT id::text,
-		        car_id::text                     AS car_id,
-		        name,
-		        category,
-		        COALESCE(install_date::text, '')  AS install_date,
-		        COALESCE(mileage_at_install, 0)   AS mileage_at_install,
-		        COALESCE(cost, 0)                 AS cost,
-		        COALESCE(notes, '')               AS notes
-		 FROM car_mods WHERE car_id = $1
-		 ORDER BY created_at ASC`,
+		`SELECT cm.id::text,
+		        cm.car_id::text                     AS car_id,
+		        cm.name,
+		        cm.category,
+		        COALESCE(cm.install_date::text, '')  AS install_date,
+		        COALESCE(cm.mileage_at_install, 0)   AS mileage_at_install,
+		        COALESCE(cm.cost, 0)                 AS cost,
+		        COALESCE(cm.notes, '')               AS notes,
+		        COUNT(mu.id)                         AS upload_count
+		 FROM car_mods cm
+		 LEFT JOIN mod_uploads mu ON mu.mod_id = cm.id
+		 WHERE cm.car_id = $1
+		 GROUP BY cm.id
+		 ORDER BY cm.created_at ASC`,
 		db.WithResultsOf(&mods),
 		carID,
 	)
 	return mods, err
+}
+
+func (g *GarageClient) getModUploads(ctx context.Context, modID string) ([]models.ModUpload, error) {
+	var uploads []models.ModUpload
+	err := g.db.Query(ctx,
+		`SELECT id::text, mod_id::text AS mod_id, object_key, name, upload_type, content_type
+		 FROM mod_uploads WHERE mod_id = $1 ORDER BY uploaded_at ASC`,
+		db.WithResultsOf(&uploads),
+		modID,
+	)
+	for i := range uploads {
+		uploads[i].URL = g.storage.ModFileURL(uploads[i].ObjectKey)
+	}
+	return uploads, err
+}
+
+func (g *GarageClient) addModUpload(ctx context.Context, accountID, modID, objectKey, name, uploadType, contentType string) (models.ModUpload, error) {
+	var owned int
+	err := g.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM car_mods cm
+		 JOIN cars c ON c.id = cm.car_id
+		 WHERE cm.id = $1 AND c.owner_id = $2`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return pgx.ErrNoRows
+			}
+			return rows.Scan(&owned)
+		},
+		modID, accountID,
+	)
+	if err != nil || owned == 0 {
+		return models.ModUpload{}, fmt.Errorf("mod not found")
+	}
+
+	var upload models.ModUpload
+	err = g.db.QueryRow(ctx,
+		`INSERT INTO mod_uploads (mod_id, object_key, name, upload_type, content_type)
+		 VALUES ($1::uuid, $2, $3, $4, $5)
+		 RETURNING id::text, mod_id::text AS mod_id, object_key, name, upload_type, content_type`,
+		db.WithResultOf(&upload),
+		modID, objectKey, name, uploadType, contentType,
+	)
+	if err == nil {
+		upload.URL = g.storage.ModFileURL(upload.ObjectKey)
+	}
+	return upload, err
+}
+
+func (g *GarageClient) removeModUpload(ctx context.Context, accountID, uploadID string) error {
+	var objectKey string
+	err := g.db.QueryRow(ctx,
+		`DELETE FROM mod_uploads
+		 WHERE id = $1::uuid
+		   AND mod_id IN (
+		     SELECT cm.id FROM car_mods cm
+		     JOIN cars c ON c.id = cm.car_id
+		     WHERE c.owner_id = $2
+		   )
+		 RETURNING object_key`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return nil
+			}
+			return rows.Scan(&objectKey)
+		},
+		uploadID, accountID,
+	)
+	if err != nil {
+		return err
+	}
+	if objectKey != "" {
+		if err := g.storage.DeleteModFile(ctx, objectKey); err != nil {
+			log.Printf("removeModUpload: delete from R2: %s", err)
+		}
+	}
+	return nil
 }
 
 func (g *GarageClient) addMod(ctx context.Context, accountID, carID string, m models.Mod) (models.Mod, error) {
@@ -387,7 +467,8 @@ func (g *GarageClient) addMod(ctx context.Context, accountID, carID string, m mo
 		           COALESCE(install_date::text, '')  AS install_date,
 		           COALESCE(mileage_at_install, 0)   AS mileage_at_install,
 		           COALESCE(cost, 0)                 AS cost,
-		           COALESCE(notes, '')               AS notes`,
+		           COALESCE(notes, '')               AS notes,
+		           0                                 AS upload_count`,
 		db.WithResultOf(&created),
 		carID, m.Name, m.Category, m.InstallDate, m.MileageAtInstall, m.Cost, m.Notes,
 	)
