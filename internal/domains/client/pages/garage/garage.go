@@ -189,6 +189,26 @@ func (g *GarageClient) removeCar(ctx context.Context, accountID, carID string) e
 	)
 }
 
+func (g *GarageClient) updateCar(ctx context.Context, accountID string, car models.Car) (models.Car, error) {
+	var updated models.Car
+	err := g.db.QueryRow(
+		ctx,
+		`UPDATE cars
+		 SET year = $3, make = $4, model = $5, trim = NULLIF($6, ''), mileage = NULLIF($7, 0)
+		 WHERE id = $1 AND owner_id = $2
+		 RETURNING id::text,
+		           year,
+		           make,
+		           model,
+		           COALESCE(trim, '')   AS trim,
+		           COALESCE(mileage, 0) AS mileage,
+		           ''                   AS object_key`,
+		db.WithResultOf(&updated),
+		car.ID, accountID, car.Year, car.Make, car.Model, car.Trim, car.Mileage,
+	)
+	return updated, err
+}
+
 func (g *GarageClient) getCarPhotos(ctx context.Context, carID string) ([]models.CarPhoto, error) {
 	var photos []models.CarPhoto
 	err := g.db.Query(

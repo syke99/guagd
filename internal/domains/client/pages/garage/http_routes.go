@@ -141,6 +141,40 @@ func (g *GarageClient) AddCar(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(car)
 }
 
+func (g *GarageClient) UpdateCar(w http.ResponseWriter, r *http.Request) {
+	var body models.Car
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	if body.ID == "" || body.Year == 0 || strings.TrimSpace(body.Make) == "" || strings.TrimSpace(body.Model) == "" {
+		http.Error(w, "id, year, make, and model required", http.StatusBadRequest)
+		return
+	}
+
+	accountID, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	car, err := g.updateCar(r.Context(), accountID, models.Car{
+		ID:      body.ID,
+		Year:    body.Year,
+		Make:    strings.TrimSpace(body.Make),
+		Model:   strings.TrimSpace(body.Model),
+		Trim:    strings.TrimSpace(body.Trim),
+		Mileage: body.Mileage,
+	})
+	if err != nil {
+		log.Printf("updateCar: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(car)
+}
+
 func (g *GarageClient) RemoveCar(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		ID string `json:"id"`

@@ -133,6 +133,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		"/api/v1/garage/avatar":                       middleware.RequireAuth(c.garage.SaveAvatar),
 		"DELETE /api/v1/garage/avatar":                middleware.RequireAuth(c.garage.RemoveAvatar),
 		"/api/v1/garage/cars/add":                     middleware.RequireAuth(c.garage.AddCar),
+		"/api/v1/garage/cars/update":                  middleware.RequireAuth(c.garage.UpdateCar),
 		"/api/v1/garage/cars/remove":                  middleware.RequireAuth(c.garage.RemoveCar),
 		"/api/v1/garage/cars/photos":                      c.garage.GetCarPhotos,
 		"/api/v1/garage/cars/photos/add":                  middleware.RequireAuth(c.garage.AddCarPhoto),

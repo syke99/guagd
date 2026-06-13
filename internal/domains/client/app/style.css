@@ -333,6 +333,64 @@ h1 em {
 .build-car-name { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
 .build-car-sub { font-size: 12px; color: var(--muted); margin-top: 3px; font-weight: 400; }
 
+.car-edit-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.car-edit-btn:hover { opacity: 1; }
+
+.car-edit-modal-inner {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+}
+.car-edit-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.car-edit-modal-title { font-size: 15px; font-weight: 700; }
+.car-edit-modal-body { display: flex; flex-direction: column; gap: 8px; }
+.car-edit-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.car-edit-row { display: flex; gap: 8px; }
+.car-edit-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.car-edit-label { font-size: 11px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.4px; }
+.car-edit-optional { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.car-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.car-edit-input:focus { outline: none; border-color: var(--accent); }
+.car-edit-save {
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  background: var(--accent); color: #fff; border: none;
+  padding: 7px 16px; border-radius: 6px; cursor: pointer;
+}
+.car-edit-cancel {
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border); padding: 7px 16px; border-radius: 6px; cursor: pointer;
+}
+
 .build-stats {
   display: flex;
   gap: 20px;
@@ -379,25 +437,9 @@ h1 em {
 }
 
 .build-url {
-  margin-top: 20px;
-  padding: 10px 14px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 6px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--muted2);
-}
-
-.build-url span {
-  color: var(--accent);
-  font-weight: 500;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  min-width: 0;
+  justify-content: flex-end;
+  padding: 0 14px 14px 0;
 }
 
 .copy-btn {

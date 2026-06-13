@@ -60,6 +60,46 @@ border-radius: 16px;"></textarea>
   </div>
 </div>
 
+<!-- Car edit modal -->
+<div id="car-edit-modal" class="modal-overlay" style="display:none;z-index:800" onclick="if(event.target===this)closeCarEditModal()">
+  <div class="car-edit-modal-inner">
+    <div class="car-edit-modal-header">
+      <div class="car-edit-modal-title">Edit Vehicle</div>
+      <button class="modal-close-btn" style="position:static" onclick="closeCarEditModal()">✕</button>
+    </div>
+    <div class="car-edit-modal-body">
+      <div class="car-edit-row">
+        <div class="car-edit-field">
+          <label class="car-edit-label" for="cem-year">Year</label>
+          <input class="car-edit-input" id="cem-year" type="number" placeholder="e.g. 2018">
+        </div>
+        <div class="car-edit-field">
+          <label class="car-edit-label" for="cem-make">Make</label>
+          <input class="car-edit-input" id="cem-make" type="text" placeholder="e.g. Subaru">
+        </div>
+        <div class="car-edit-field">
+          <label class="car-edit-label" for="cem-model">Model</label>
+          <input class="car-edit-input" id="cem-model" type="text" placeholder="e.g. WRX">
+        </div>
+      </div>
+      <div class="car-edit-row">
+        <div class="car-edit-field">
+          <label class="car-edit-label" for="cem-trim">Trim <span class="car-edit-optional">(optional)</span></label>
+          <input class="car-edit-input" id="cem-trim" type="text" placeholder="e.g. STI">
+        </div>
+        <div class="car-edit-field">
+          <label class="car-edit-label" for="cem-mileage">Mileage <span class="car-edit-optional">(optional)</span></label>
+          <input class="car-edit-input" id="cem-mileage" type="number" placeholder="e.g. 45000">
+        </div>
+      </div>
+    </div>
+    <div class="car-edit-modal-footer">
+      <button class="car-edit-cancel" onclick="closeCarEditModal()">Cancel</button>
+      <button class="car-edit-save"   onclick="submitCarEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Photo upload modal -->
 <div id="upload-modal" class="modal-overlay" style="display:none;z-index:600" onclick="if(event.target===this)closeUploadModal()">
   <div class="upload-modal-inner">
@@ -274,6 +314,67 @@ function removeCar(id, btn) {
   });
 }
 
+let carEditTargetId = null;
+
+function openCarEditModal(carId) {
+  carEditTargetId = carId;
+  const car = currentModalCar;
+  document.getElementById('cem-year').value    = car.year || '';
+  document.getElementById('cem-make').value    = car.make || '';
+  document.getElementById('cem-model').value   = car.model || '';
+  document.getElementById('cem-trim').value    = car.trim || '';
+  document.getElementById('cem-mileage').value = car.mileage || '';
+  document.getElementById('car-edit-modal').style.display = 'flex';
+}
+
+function closeCarEditModal() {
+  document.getElementById('car-edit-modal').style.display = 'none';
+  carEditTargetId = null;
+}
+
+async function submitCarEdit() {
+  const carId   = carEditTargetId;
+  if (!carId) return;
+  const year    = parseInt(document.getElementById('cem-year').value, 10);
+  const make    = document.getElementById('cem-make').value.trim();
+  const model   = document.getElementById('cem-model').value.trim();
+  const trim    = document.getElementById('cem-trim').value.trim();
+  const mileage = parseInt(document.getElementById('cem-mileage').value, 10) || 0;
+  if (!year || !make || !model) return;
+
+  const res = await fetch('/api/v1/garage/cars/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id: carId, year, make, model, trim, mileage}),
+  });
+  if (!res.ok) return;
+  const updated = await res.json();
+
+  const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
+  if (wrap) {
+    wrap.dataset.year    = updated.year;
+    wrap.dataset.make    = updated.make;
+    wrap.dataset.model   = updated.model;
+    wrap.dataset.trim    = updated.trim || '';
+    wrap.dataset.mileage = updated.mileage || '';
+    const nameEl = wrap.querySelector('.car-card-name');
+    if (nameEl) nameEl.textContent = updated.year + ' ' + updated.make + ' ' + updated.model;
+    const subEl = wrap.querySelector('.car-card-sub');
+    const subParts = [updated.trim, updated.mileage ? updated.mileage + ' mi' : ''].filter(Boolean);
+    if (subEl) {
+      subEl.textContent = subParts.join(' · ');
+      subEl.style.display = subParts.length ? '' : 'none';
+    }
+  }
+
+  currentModalCar = Object.assign({}, currentModalCar, {
+    year: updated.year, make: updated.make, model: updated.model,
+    trim: updated.trim || '', mileage: updated.mileage || 0,
+  });
+  closeCarEditModal();
+  renderCarModal(currentModalCar);
+}
+
 function adjustCarCount(delta) {
   const sub = document.querySelector('.garage-profile-tab .panel-sub');
   if (!sub) return;
@@ -473,13 +574,14 @@ let currentBuildTab = 'mods';
 
 function openCarModal(wrap) {
   const id = wrap.dataset.id;
-  const year = wrap.dataset.year;
+  const year = parseInt(wrap.dataset.year, 10);
   const make = wrap.dataset.make;
   const model = wrap.dataset.model;
   const trim = wrap.dataset.trim || '';
+  const mileage = parseInt(wrap.dataset.mileage, 10) || 0;
   const primaryURL = wrap.dataset.primaryPhotoUrl || '';
   activeCarId = id;
-  currentModalCar = {id, year, make, model, trim, primaryURL, photos: null, mods: null, maintenance: null};
+  currentModalCar = {id, year, make, model, trim, mileage, primaryURL, photos: null, mods: null, maintenance: null};
 
   renderCarModal(currentModalCar);
   document.getElementById('car-modal').style.display = 'flex';
@@ -502,7 +604,7 @@ function copyCar(btn, shortId) {
   btn.textContent = 'Copied!';
   btn.classList.add('copied');
   btn.disabled = true;
-  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); btn.disabled = false; }, 2000);
+  setTimeout(() => { btn.textContent = 'Share'; btn.classList.remove('copied'); btn.disabled = false; }, 2000);
 }
 
 function closeCarModal() {
@@ -532,7 +634,7 @@ function switchBuildTab(carId, tab, btn) {
   if (maintActions) maintActions.style.display = tab === 'maintenance' ? '' : 'none';
 }
 
-function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods, maintenance}) {
+function renderCarModal({id, year, make, model, trim, mileage, primaryURL, photos, mods, maintenance}) {
   const canEdit = isOwner && editMode !== null;
   const canManageMods = isOwner;
 
@@ -555,12 +657,16 @@ function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods, 
     <div class="card-cover" ${coverClick}>${coverInner}${coverRemoveBtn}</div>
     <div class="card-body">
       <div class="build-card-header">
-        <div>
-          <div class="build-car-name">${year} ${make} ${model}</div>
-          <div class="build-car-sub">${trim || 'Build Details'}</div>
+        <div style="min-width:0;flex:1">
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="build-car-name">${escHtml(year + ' ' + make + ' ' + model)}</div>
+            ${canManageMods ? `<button class="car-edit-btn" onclick="openCarEditModal('${id}')" title="Edit car info">✏</button>` : ''}
+          </div>
+          <div class="build-car-sub">${trim ? escHtml(trim) : 'Build Details'}</div>
         </div>
         <div class="build-stats">
           <div class="stat"><div class="stat-val">${mods ? mods.length : '—'}</div><div class="stat-label">Mods</div></div>
+          <div class="stat"><div class="stat-val">${maintenance ? maintenance.length : '—'}</div><div class="stat-label">Maintenance</div></div>
           <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
         </div>
       </div>
@@ -582,12 +688,11 @@ function renderCarModal({id, year, make, model, trim, primaryURL, photos, mods, 
           <div id="build-tab-actions-maintenance-${id}" style="display:none">${buildMaintenanceAddForm(id)}</div>
         ` : ''}
       </div>
-      <div class="build-url" style="margin:20px 0">
-        <span>${window.location.origin}${window.location.pathname}?car=${id.slice(0,8)}</span>
-        <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'${id.slice(0,8)}')">Copy</button>
-      </div>
     </div>
     ${photoStrip}
+    <div class="build-url" style="margin:12px 0 0">
+      <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'${id.slice(0,8)}')">Share</button>
+    </div>
   `;
   if (currentBuildTab !== 'mods') switchBuildTab(id, currentBuildTab);
 }
