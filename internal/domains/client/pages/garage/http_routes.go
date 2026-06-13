@@ -483,3 +483,126 @@ func (g *GarageClient) RemoveCarUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (g *GarageClient) GetMaintenance(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	if carID == "" {
+		http.Error(w, "car_id required", http.StatusBadRequest)
+		return
+	}
+	records, err := g.getMaintenance(r.Context(), carID)
+	if err != nil {
+		log.Printf("getMaintenance: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if records == nil {
+		records = []models.Maintenance{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(records)
+}
+
+func (g *GarageClient) AddMaintenance(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	if carID == "" {
+		http.Error(w, "car_id required", http.StatusBadRequest)
+		return
+	}
+	var body models.Maintenance
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.Name) == "" {
+		http.Error(w, "name required", http.StatusBadRequest)
+		return
+	}
+	if body.Category == "" {
+		body.Category = "Other"
+	}
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	record, err := g.addMaintenance(r.Context(), id, carID, body)
+	if err != nil {
+		log.Printf("addMaintenance: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(record)
+}
+
+func (g *GarageClient) RemoveMaintenance(w http.ResponseWriter, r *http.Request) {
+	recordID := r.URL.Query().Get("record_id")
+	if recordID == "" {
+		http.Error(w, "record_id required", http.StatusBadRequest)
+		return
+	}
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	if err := g.removeMaintenance(r.Context(), id, recordID); err != nil {
+		log.Printf("removeMaintenance: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (g *GarageClient) GetMaintenanceUploads(w http.ResponseWriter, r *http.Request) {
+	maintenanceID := r.URL.Query().Get("maintenance_id")
+	if maintenanceID == "" {
+		http.Error(w, "maintenance_id required", http.StatusBadRequest)
+		return
+	}
+	uploads, err := g.getMaintenanceUploads(r.Context(), maintenanceID)
+	if err != nil {
+		log.Printf("getMaintenanceUploads: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if uploads == nil {
+		uploads = []models.CarUpload{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(uploads)
+}
+
+func (g *GarageClient) AddMaintenanceUpload(w http.ResponseWriter, r *http.Request) {
+	maintenanceID := r.URL.Query().Get("maintenance_id")
+	if maintenanceID == "" {
+		http.Error(w, "maintenance_id required", http.StatusBadRequest)
+		return
+	}
+	var body struct {
+		ObjectKey   string `json:"object_key"`
+		Name        string `json:"name"`
+		UploadType  string `json:"upload_type"`
+		ContentType string `json:"content_type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.ObjectKey) == "" || strings.TrimSpace(body.Name) == "" {
+		http.Error(w, "object_key and name required", http.StatusBadRequest)
+		return
+	}
+	if body.UploadType == "" {
+		body.UploadType = "Receipt"
+	}
+	if body.ContentType == "" {
+		body.ContentType = "application/octet-stream"
+	}
+	id, ok := accountID(r)
+	if !ok {
+		http.Error(w, "session expired; please sign out and sign back in", http.StatusUnauthorized)
+		return
+	}
+	upload, err := g.addMaintenanceUpload(r.Context(), id, maintenanceID, body.ObjectKey, body.Name, body.UploadType, body.ContentType)
+	if err != nil {
+		log.Printf("addMaintenanceUpload: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(upload)
+}

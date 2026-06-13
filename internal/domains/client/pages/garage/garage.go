@@ -410,10 +410,9 @@ func (g *GarageClient) removeCarUpload(ctx context.Context, accountID, uploadID 
 	err := g.db.QueryRow(ctx,
 		`DELETE FROM car_uploads
 		 WHERE id = $1::uuid
-		   AND mod_id IN (
-		     SELECT cm.id FROM car_mods cm
-		     JOIN cars c ON c.id = cm.car_id
-		     WHERE c.owner_id = $2
+		   AND (
+		     mod_id IN (SELECT cm.id FROM car_mods cm JOIN cars c ON c.id = cm.car_id WHERE c.owner_id = $2)
+		     OR maintenance_id IN (SELECT cm.id FROM car_maintenance cm JOIN cars c ON c.id = cm.car_id WHERE c.owner_id = $2)
 		   )
 		 RETURNING object_key`,
 		func(rows pgx.Rows) error {
@@ -484,4 +483,119 @@ func (g *GarageClient) removeMod(ctx context.Context, accountID, modID string) e
 		   AND cars.owner_id = $2`,
 		modID, accountID,
 	)
+}
+
+func (g *GarageClient) getMaintenance(ctx context.Context, carID string) ([]models.Maintenance, error) {
+	var records []models.Maintenance
+	err := g.db.Query(ctx,
+		`SELECT cm.id::text,
+		        cm.car_id::text                    AS car_id,
+		        cm.name,
+		        cm.category,
+		        COALESCE(cm.service_date::text, '') AS service_date,
+		        COALESCE(cm.mileage, 0)             AS mileage,
+		        COALESCE(cm.cost, 0)                AS cost,
+		        COALESCE(cm.notes, '')              AS notes,
+		        COUNT(cu.id)                        AS upload_count
+		 FROM car_maintenance cm
+		 LEFT JOIN car_uploads cu ON cu.maintenance_id = cm.id
+		 WHERE cm.car_id = $1
+		 GROUP BY cm.id
+		 ORDER BY cm.created_at ASC`,
+		db.WithResultsOf(&records),
+		carID,
+	)
+	return records, err
+}
+
+func (g *GarageClient) addMaintenance(ctx context.Context, accountID, carID string, m models.Maintenance) (models.Maintenance, error) {
+	var owned int
+	err := g.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM cars WHERE id = $1 AND owner_id = $2`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return pgx.ErrNoRows
+			}
+			return rows.Scan(&owned)
+		},
+		carID, accountID,
+	)
+	if err != nil || owned == 0 {
+		return models.Maintenance{}, fmt.Errorf("car not found")
+	}
+
+	var created models.Maintenance
+	err = g.db.QueryRow(ctx,
+		`INSERT INTO car_maintenance (car_id, name, category, service_date, mileage, cost, notes)
+		 VALUES ($1, $2, $3, NULLIF($4,'')::date, NULLIF($5,0), NULLIF($6,0), NULLIF($7,''))
+		 RETURNING id::text,
+		           car_id::text                    AS car_id,
+		           name,
+		           category,
+		           COALESCE(service_date::text, '') AS service_date,
+		           COALESCE(mileage, 0)             AS mileage,
+		           COALESCE(cost, 0)                AS cost,
+		           COALESCE(notes, '')              AS notes,
+		           0                               AS upload_count`,
+		db.WithResultOf(&created),
+		carID, m.Name, m.Category, m.ServiceDate, m.Mileage, m.Cost, m.Notes,
+	)
+	return created, err
+}
+
+func (g *GarageClient) removeMaintenance(ctx context.Context, accountID, recordID string) error {
+	return g.db.Exec(ctx,
+		`DELETE FROM car_maintenance cm
+		 USING cars
+		 WHERE cm.id = $1
+		   AND cm.car_id = cars.id
+		   AND cars.owner_id = $2`,
+		recordID, accountID,
+	)
+}
+
+func (g *GarageClient) getMaintenanceUploads(ctx context.Context, maintenanceID string) ([]models.CarUpload, error) {
+	var uploads []models.CarUpload
+	err := g.db.Query(ctx,
+		`SELECT id::text, maintenance_id::text AS mod_id, object_key, name, upload_type, content_type
+		 FROM car_uploads WHERE maintenance_id = $1 ORDER BY uploaded_at ASC`,
+		db.WithResultsOf(&uploads),
+		maintenanceID,
+	)
+	for i := range uploads {
+		uploads[i].URL = g.storage.CarFileURL(uploads[i].ObjectKey)
+	}
+	return uploads, err
+}
+
+func (g *GarageClient) addMaintenanceUpload(ctx context.Context, accountID, maintenanceID, objectKey, name, uploadType, contentType string) (models.CarUpload, error) {
+	var owned int
+	err := g.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM car_maintenance cm
+		 JOIN cars c ON c.id = cm.car_id
+		 WHERE cm.id = $1 AND c.owner_id = $2`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return pgx.ErrNoRows
+			}
+			return rows.Scan(&owned)
+		},
+		maintenanceID, accountID,
+	)
+	if err != nil || owned == 0 {
+		return models.CarUpload{}, fmt.Errorf("maintenance record not found")
+	}
+
+	var upload models.CarUpload
+	err = g.db.QueryRow(ctx,
+		`INSERT INTO car_uploads (maintenance_id, object_key, name, upload_type, content_type)
+		 VALUES ($1::uuid, $2, $3, $4, $5)
+		 RETURNING id::text, maintenance_id::text AS mod_id, object_key, name, upload_type, content_type`,
+		db.WithResultOf(&upload),
+		maintenanceID, objectKey, name, uploadType, contentType,
+	)
+	if err == nil {
+		upload.URL = g.storage.CarFileURL(upload.ObjectKey)
+	}
+	return upload, err
 }
