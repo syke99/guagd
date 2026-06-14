@@ -24,7 +24,7 @@ body {
   color: var(--text);
   font-family: 'Inter', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* NAV */

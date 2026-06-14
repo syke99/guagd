@@ -9,16 +9,15 @@
     <a href="#features">Features</a>
     <a href="#capture">Waitlist</a>
     <button class="btn-nav"
-            hx-get="/signin"
-            hx-target="#app"
-            hx-swap="innerHTML"
-            hx-push-url="/signin">Sign In</button>
-    <button class="btn-nav" id="early-access-signup" style="display:none"
             hx-get="/signup"
             hx-target="#app"
             hx-swap="innerHTML"
             hx-push-url="/signup">Create Account</button>
-    <button class="btn-nav" hx-get="/waitlist" hx-target="#hero-right" hx-swap="innerHTML">Request Early Access</button>
+    <button class="btn-nav"
+            hx-get="/signin"
+            hx-target="#app"
+            hx-swap="innerHTML"
+            hx-push-url="/signin">Sign In</button>
   </div>
 </nav>
 
@@ -383,7 +382,7 @@
           <div class="tier-name">Owner Reported</div>
           <div class="tier-desc">Self-documented. A good start.</div>
         </div>
-        <span class="tier-badge">Baseline</span>
+        <span class="tier-badge">Reported</span>
       </div>
       <div class="trust-tier">
         <div class="tier-level">02</div>
@@ -391,7 +390,7 @@
           <div class="tier-name">Documentation Attached</div>
           <div class="tier-desc">Receipts, dyno sheets, alignment reports.</div>
         </div>
-        <span class="tier-badge">Better</span>
+        <span class="tier-badge">Documented</span>
       </div>
       <div class="trust-tier trust-tier--elevated">
         <div class="tier-level">03</div>
@@ -399,7 +398,7 @@
           <div class="tier-name">Verified By Shop</div>
           <div class="tier-desc">Shop inspected work done elsewhere.</div>
         </div>
-        <span class="tier-badge tier-badge--accent">Trusted</span>
+        <span class="tier-badge tier-badge--accent">Verified</span>
       </div>
       <div class="trust-tier trust-tier--top">
         <div class="tier-level">04</div>
@@ -407,7 +406,7 @@
           <div class="tier-name">Performed By Shop</div>
           <div class="tier-desc">Shop directly did the work. Maximum confidence.</div>
         </div>
-        <span class="tier-badge tier-badge--top">Verified</span>
+        <span class="tier-badge tier-badge--top">Performed</span>
       </div>
     </div>
   </div>
