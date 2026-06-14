@@ -42,10 +42,24 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 		cars = make([]models.Car, 0)
 	}
 
+	var accountShortID string
+	if isAuthenticated {
+		if isOwner {
+			if len(user.AccountID) >= 8 {
+				accountShortID = user.AccountID[:8]
+			}
+		} else {
+			if id, err := g.getAccountIDBySupertokensID(r.Context(), sessionContainer.GetUserID()); err == nil && len(id) >= 8 {
+				accountShortID = id[:8]
+			}
+		}
+	}
+
 	data := models.GaragePageData{
 		Username:        user.Username,
 		IsOwner:         isOwner,
 		IsAuthenticated: isAuthenticated,
+		AccountShortID:  accountShortID,
 		CarCount:        len(cars),
 		Cars:            cars,
 		Layout:          layout,

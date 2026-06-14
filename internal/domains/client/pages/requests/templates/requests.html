@@ -1,0 +1,429 @@
+{{define "nav-page-controls"}}{{end}}
+{{define "nav-page-dropdown"}}
+{{if .AccountShortID}}
+<a href="/requests?u={{.AccountShortID}}" class="nav-menu-item">Requests</a>
+{{end}}
+{{end}}
+
+{{define "requests.html"}}
+{{template "nav" .}}
+<div class="requests-page">
+  <div class="requests-header">
+    <h1 class="requests-title">Requests</h1>
+    {{if eq .AcctType "shop"}}
+    <span class="requests-subtitle">Incoming verification requests</span>
+    {{else}}
+    <button class="btn-primary" onclick="openRequestWizard()">+ New Request</button>
+    {{end}}
+  </div>
+
+  {{if eq .AcctType "shop"}}
+  <div id="shop-request-list-wrap">
+    {{template "shop-request-list" .}}
+  </div>
+  {{else}}
+  <div id="driver-request-list-wrap">
+    {{template "driver-request-list" .}}
+  </div>
+  {{end}}
+</div>
+
+{{if ne .AcctType "shop"}}
+<!-- Request Wizard Modal -->
+<div id="request-wizard-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRequestWizard()">
+  <div class="modal-box" style="width:520px;max-width:95vw">
+    <div class="modal-title">New Verification Request</div>
+
+    <!-- Step indicator -->
+    <div class="wizard-steps" id="wizard-steps">
+      <span class="wizard-step active" id="wstep-1">1. Car</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-2">2. Records</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-3">3. Shop</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-4">4. Type</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-5">5. Submit</span>
+    </div>
+
+    <!-- Step 1: Select car -->
+    <div id="wizard-step-1" class="wizard-panel">
+      <p class="wizard-prompt">Which car is this request for?</p>
+      <div id="wizard-car-list"
+           hx-get="/api/v1/driver/requests/wizard/cars?u={{.AccountShortID}}"
+           hx-trigger="load"
+           hx-target="#wizard-car-list">
+        <div class="wizard-loading">Loading…</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="closeRequestWizard()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Select records -->
+    <div id="wizard-step-2" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Select the mods and maintenance records to include:</p>
+      <div id="wizard-records-list"></div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(1)">Back</button>
+        <button class="btn-primary" onclick="wizardNext(3)">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Find shop -->
+    <div id="wizard-step-3" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Which shop are you sending this request to?</p>
+      <input type="text" class="add-car-input" id="wizard-shop-search"
+             placeholder="Search by shop @username"
+             autocomplete="off"
+             oninput="wizardShopSearch(this.value)">
+      <div id="wizard-shop-results" class="wizard-shop-results"></div>
+      <div id="wizard-shop-selected" class="wizard-shop-selected" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(2)">Back</button>
+        <button class="btn-primary" id="wizard-next-3" onclick="wizardNext(4)" disabled>Next</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Request type -->
+    <div id="wizard-step-4" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Is this for work the shop <strong>performed themselves</strong>, or work done by <strong>another shop</strong> that you're asking them to verify?</p>
+      <div class="wizard-radio-group">
+        <label class="wizard-radio-label">
+          <input type="radio" name="work_type" value="own_work" onchange="wizardSetWorkType('own_work')"> Shop's own work
+        </label>
+        <label class="wizard-radio-label">
+          <input type="radio" name="work_type" value="other_shop_work" onchange="wizardSetWorkType('other_shop_work')"> Another shop's work
+        </label>
+      </div>
+      <p class="wizard-prompt" style="margin-top:16px">Is this work <strong>already done</strong>, or are you requesting <strong>future service</strong>?</p>
+      <div class="wizard-radio-group">
+        <label class="wizard-radio-label">
+          <input type="radio" name="service_type" value="past" onchange="wizardSetServiceType('past')"> Already performed
+        </label>
+        <label class="wizard-radio-label">
+          <input type="radio" name="service_type" value="appointment" onchange="wizardSetServiceType('appointment')"> Schedule future service
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(3)">Back</button>
+        <button class="btn-primary" id="wizard-next-4" onclick="wizardNext(5)" disabled>Next</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Notes + submit -->
+    <div id="wizard-step-5" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Any notes for the shop? (optional)</p>
+      <textarea id="wizard-notes" class="wizard-notes-input" placeholder="e.g. Can reference invoice #1234, work done in March 2023" rows="4"></textarea>
+      <div id="wizard-submit-status" class="upload-status"></div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(4)">Back</button>
+        <button class="btn-primary" onclick="submitRequest()">Send Request</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<!-- Denial note modal -->
+<div id="denial-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeDenialModal()">
+  <div class="modal-box" style="width:420px;max-width:95vw">
+    <div class="modal-title">Reason for Denial</div>
+    <textarea id="denial-notes-input" class="wizard-notes-input" placeholder="Explain why this request is being denied (optional)" rows="4"></textarea>
+    <div class="modal-actions">
+      <button class="btn-nav" onclick="closeDenialModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmDeny()">Confirm Denial</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Wizard state ─────────────────────────────────────────────────────────────
+var wiz = {
+  carID: null,
+  verifIDs: [],
+  shopUsername: null,
+  shopID: null,
+  workType: null,
+  serviceType: null,
+  currentStep: 1
+};
+
+function openRequestWizard() {
+  wiz = { carID: null, verifIDs: [], shopUsername: null, shopID: null, workType: null, serviceType: null, currentStep: 1 };
+  document.getElementById('request-wizard-modal').style.display = 'flex';
+  showWizardStep(1);
+}
+function closeRequestWizard() {
+  document.getElementById('request-wizard-modal').style.display = 'none';
+}
+
+function showWizardStep(n) {
+  wiz.currentStep = n;
+  for (let i = 1; i <= 5; i++) {
+    const panel = document.getElementById('wizard-step-' + i);
+    const step  = document.getElementById('wstep-' + i);
+    if (panel) panel.style.display = i === n ? 'block' : 'none';
+    if (step)  step.classList.toggle('active', i === n);
+  }
+}
+
+function wizardBack(step) { showWizardStep(step); }
+
+function wizardNext(step) {
+  if (step === 3 && wiz.verifIDs.length === 0) {
+    alert('Select at least one record.'); return;
+  }
+  if (step === 5 && (!wiz.workType || !wiz.serviceType)) {
+    alert('Please select both options.'); return;
+  }
+  showWizardStep(step);
+}
+
+function selectCar(el) {
+  wiz.carID = el.dataset.id;
+  document.querySelectorAll('.wizard-car-item').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+
+  // Load records for this car
+  const list = document.getElementById('wizard-records-list');
+  list.innerHTML = '<div class="wizard-loading">Loading…</div>';
+  fetch('/api/v1/driver/requests/wizard/records?u={{.AccountShortID}}&car_id=' + wiz.carID)
+    .then(r => r.text())
+    .then(html => { list.innerHTML = html; showWizardStep(2); });
+}
+
+function toggleRecord(el, verifID) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) {
+    if (!wiz.verifIDs.includes(verifID)) wiz.verifIDs.push(verifID);
+  } else {
+    wiz.verifIDs = wiz.verifIDs.filter(id => id !== verifID);
+  }
+}
+
+var shopSearchTimer = null;
+function wizardShopSearch(q) {
+  clearTimeout(shopSearchTimer);
+  if (!q) { document.getElementById('wizard-shop-results').innerHTML = ''; return; }
+  shopSearchTimer = setTimeout(() => {
+    fetch('/api/v1/driver/requests/wizard/shops?q=' + encodeURIComponent(q))
+      .then(r => r.text())
+      .then(html => { document.getElementById('wizard-shop-results').innerHTML = html; });
+  }, 150);
+}
+
+function selectShop(el) {
+  wiz.shopID = el.dataset.id;
+  wiz.shopUsername = el.dataset.username;
+  document.getElementById('wizard-shop-results').innerHTML = '';
+  const sel = document.getElementById('wizard-shop-selected');
+  sel.innerHTML = '<span class="wizard-shop-badge">@' + wiz.shopUsername + ' <button onclick="clearShop()" style="background:none;border:none;cursor:pointer;color:var(--muted)">✕</button></span>';
+  sel.style.display = 'block';
+  document.getElementById('wizard-next-3').disabled = false;
+}
+function clearShop() {
+  wiz.shopID = null; wiz.shopUsername = null;
+  document.getElementById('wizard-shop-selected').style.display = 'none';
+  document.getElementById('wizard-next-3').disabled = true;
+  document.getElementById('wizard-shop-search').value = '';
+}
+
+function wizardSetWorkType(v) {
+  wiz.workType = v; checkStep4();
+}
+function wizardSetServiceType(v) {
+  wiz.serviceType = v; checkStep4();
+}
+function checkStep4() {
+  document.getElementById('wizard-next-4').disabled = !(wiz.workType && wiz.serviceType);
+}
+
+function submitRequest() {
+  const status = document.getElementById('wizard-submit-status');
+  status.textContent = 'Sending…';
+  const payload = {
+    shop_username: wiz.shopUsername,
+    service_type: wiz.serviceType,
+    work_type: wiz.workType,
+    notes: document.getElementById('wizard-notes').value,
+    verif_ids: wiz.verifIDs
+  };
+  fetch('/api/v1/driver/requests/create?u={{.AccountShortID}}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.ok ? r.text() : Promise.reject(r))
+  .then(html => {
+    document.getElementById('driver-request-list-wrap').innerHTML = html;
+    closeRequestWizard();
+  })
+  .catch(() => { status.textContent = 'Failed to send. Try again.'; });
+}
+
+// ── Denial modal ─────────────────────────────────────────────────────────────
+var pendingDenyItemID = null;
+
+function openDenyModal(itemID) {
+  pendingDenyItemID = itemID;
+  document.getElementById('denial-notes-input').value = '';
+  document.getElementById('denial-modal').style.display = 'flex';
+}
+function closeDenialModal() {
+  document.getElementById('denial-modal').style.display = 'none';
+  pendingDenyItemID = null;
+}
+
+function approveItem(itemID) {
+  respondItems([{ item_id: itemID, status: 'approved', denial_notes: '' }]);
+}
+function confirmDeny() {
+  const notes = document.getElementById('denial-notes-input').value;
+  closeDenialModal();
+  respondItems([{ item_id: pendingDenyItemID, status: 'denied', denial_notes: notes }]);
+}
+
+function respondItems(items) {
+  const u = new URLSearchParams(window.location.search).get('u') || '';
+  fetch('/api/v1/shop/requests/respond?u=' + u, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items })
+  })
+  .then(r => r.ok ? r.text() : Promise.reject())
+  .then(html => {
+    document.getElementById('shop-request-list-wrap').innerHTML = html;
+  })
+  .catch(() => alert('Failed. Please try again.'));
+}
+</script>
+{{end}}
+
+{{define "driver-request-list"}}
+{{if not .Requests}}
+<div class="requests-empty">No verification requests yet. Click <strong>+ New Request</strong> to get started.</div>
+{{else}}
+{{range .Requests}}
+<div class="req-card">
+  <div class="req-card-header">
+    <span class="req-shop-name">@{{.ShopName}}</span>
+    <span class="req-type-badge">{{if eq .ServiceType "appointment"}}Appointment{{else}}Verification{{end}}</span>
+    <span class="req-work-badge">{{if eq .WorkType "own_work"}}Own Work{{else}}Other Shop{{end}}</span>
+    <span class="req-status-badge req-status--{{.Status}}">{{.Status}}</span>
+  </div>
+  {{if .Notes}}<div class="req-notes">{{.Notes}}</div>{{end}}
+  <div class="req-items">
+    {{range .Items}}
+    <div class="req-item">
+      <span class="mod-category-badge">{{.Category}}</span>
+      <span class="req-item-name">{{.RecordName}}</span>
+      <span class="req-item-type">{{if eq .RecordType "mod"}}Mod{{else}}Maintenance{{end}}</span>
+      <span class="req-item-status req-item-status--{{.Status}}">{{.Status}}</span>
+      {{if .DenialNotes}}<span class="req-item-denial">"{{.DenialNotes}}"</span>{{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}
+{{end}}
+{{end}}
+
+{{define "shop-request-list"}}
+{{if not .Requests}}
+<div class="requests-empty">No incoming requests yet.</div>
+{{else}}
+
+<!-- Tab bar: Future | Past -->
+<div class="req-tab-bar">
+  <button class="req-tab active" id="tab-future" onclick="switchReqTab('future')">Future Service</button>
+  <button class="req-tab" id="tab-past" onclick="switchReqTab('past')">Past Work</button>
+</div>
+
+<div id="req-panel-future" class="req-tab-panel">
+  {{$hasAppt := false}}
+  {{range .Requests}}{{if eq .ServiceType "appointment"}}{{$hasAppt = true}}
+  {{template "shop-request-card" .}}
+  {{end}}{{end}}
+  {{if not $hasAppt}}<div class="requests-empty">No upcoming service requests.</div>{{end}}
+</div>
+
+<div id="req-panel-past" class="req-tab-panel" style="display:none">
+  {{$hasPast := false}}
+  {{range .Requests}}{{if eq .ServiceType "past"}}{{$hasPast = true}}
+  {{template "shop-request-card" .}}
+  {{end}}{{end}}
+  {{if not $hasPast}}<div class="requests-empty">No past verification requests.</div>{{end}}
+</div>
+
+<script>
+function switchReqTab(tab) {
+  document.getElementById('req-panel-future').style.display = tab === 'future' ? 'block' : 'none';
+  document.getElementById('req-panel-past').style.display   = tab === 'past'   ? 'block' : 'none';
+  document.getElementById('tab-future').classList.toggle('active', tab === 'future');
+  document.getElementById('tab-past').classList.toggle('active',   tab === 'past');
+}
+</script>
+{{end}}
+{{end}}
+
+{{define "shop-request-card"}}
+<div class="req-card">
+  <div class="req-card-header">
+    <span class="req-shop-name">Request from @{{.ShopName}}</span>
+    <span class="req-work-badge">{{if eq .WorkType "own_work"}}Own Work{{else}}Other Shop{{end}}</span>
+  </div>
+  {{if .Notes}}<div class="req-notes">{{.Notes}}</div>{{end}}
+  <div class="req-items">
+    {{range .Items}}
+    <div class="req-item" id="req-item-{{.ID}}">
+      <div class="req-item-left">
+        <span class="mod-category-badge">{{.Category}}</span>
+        <span class="req-item-name">{{.RecordName}}</span>
+        <span class="req-item-type">{{if eq .RecordType "mod"}}Mod{{else}}Maintenance{{end}}</span>
+      </div>
+      <div class="req-item-right">
+        {{if eq .Status "pending"}}
+        <button class="req-approve-btn" onclick="approveItem('{{.ID}}')">Approve</button>
+        <button class="req-deny-btn"    onclick="openDenyModal('{{.ID}}')">Deny</button>
+        {{else if eq .Status "approved"}}
+        <span class="req-item-status req-item-status--approved">Approved</span>
+        {{else if eq .Status "denied"}}
+        <span class="req-item-status req-item-status--denied">Denied</span>
+        {{if .DenialNotes}}<span class="req-item-denial">"{{.DenialNotes}}"</span>{{end}}
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "wizard-cars"}}
+{{if not .}}
+<div class="wizard-empty">No vehicles in your garage yet.</div>
+{{else}}
+{{range .}}
+<div class="wizard-car-item" data-id="{{.ID}}" onclick="selectCar(this)">
+  <span class="wizard-car-name">{{.Year}} {{.Make}} {{.Model}}</span>
+  {{if .Trim}}<span class="wizard-car-trim">{{.Trim}}</span>{{end}}
+</div>
+{{end}}
+{{end}}
+{{end}}
+
+{{define "wizard-records"}}
+{{if not .}}
+<div class="wizard-empty">No mods or maintenance records for this car.</div>
+{{else}}
+{{range .}}
+<div class="wizard-record-item" onclick="toggleRecord(this,'{{.VerifID}}')">
+  <span class="mod-category-badge">{{.Category}}</span>
+  <span class="wizard-record-name">{{.RecordName}}</span>
+  <span class="wizard-record-type">{{if eq .RecordType "mod"}}Mod{{else}}Maintenance{{end}}</span>
+  <span class="trust-badge trust-badge--{{.VerifLevel}}">{{.VerifLevel}}</span>
+</div>
+{{end}}
+{{end}}
+{{end}}

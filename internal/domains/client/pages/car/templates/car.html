@@ -96,7 +96,7 @@
                   <span class="mod-category-badge">{{.Category}}</span>
                   <span class="mod-name">{{.Name}}</span>
                   {{if .UploadCount}}<span class="mod-clip-btn">📎<span class="mod-clip-count">{{.UploadCount}}</span></span>{{end}}
-                  <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}">{{trustLabel .UploadCount}}</span>
+                  <span class="trust-badge trust-badge--{{trustLevel .VerifLevel}}"{{with trustTooltip .VerifLevel .VerifShopName}} data-tooltip="{{.}}"{{end}}>{{trustLabel .VerifLevel}}</span>
                 </div>
                 {{with formatModMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
                 {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}
@@ -119,7 +119,7 @@
                   <span class="mod-category-badge">{{.Category}}</span>
                   <span class="mod-name">{{.Name}}</span>
                   {{if .UploadCount}}<span class="mod-clip-btn">📎<span class="mod-clip-count">{{.UploadCount}}</span></span>{{end}}
-                  <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}">{{trustLabel .UploadCount}}</span>
+                  <span class="trust-badge trust-badge--{{trustLevel .VerifLevel}}"{{with trustTooltip .VerifLevel .VerifShopName}} data-tooltip="{{.}}"{{end}}>{{trustLabel .VerifLevel}}</span>
                 </div>
                 {{with formatMaintMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
                 {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}

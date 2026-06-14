@@ -44,10 +44,24 @@ func (h *HQClient) HQPage(w http.ResponseWriter, r *http.Request) {
 		members = []models.HQMember{}
 	}
 
+	var accountShortID string
+	if isAuthenticated {
+		if isOwner {
+			if len(user.AccountID) >= 8 {
+				accountShortID = user.AccountID[:8]
+			}
+		} else {
+			if id, err := h.getAccountIDBySupertokensID(r.Context(), sessionContainer.GetUserID()); err == nil && len(id) >= 8 {
+				accountShortID = id[:8]
+			}
+		}
+	}
+
 	data := models.HQPageData{
 		Username:        user.Username,
 		IsOwner:         isOwner,
 		IsAuthenticated: isAuthenticated,
+		AccountShortID:  accountShortID,
 		MemberCount:     len(members),
 		Members:         members,
 		Layout:          layout,

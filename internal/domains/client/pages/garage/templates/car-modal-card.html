@@ -66,7 +66,7 @@
         {{if .UploadCount}}
         <button class="mod-clip-btn" title="{{.UploadCount}} document{{if ne .UploadCount 1}}s{{end}}" onclick="openModUploadsViewer('{{.ID}}','{{.Name}}')">📎<span class="mod-clip-count">{{.UploadCount}}</span></button>
         {{end}}
-        <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}" data-tooltip="coming soon: shop verification!">{{trustLabel .UploadCount}}</span>
+        <span class="trust-badge trust-badge--{{trustLevel .VerifLevel}}"{{with trustTooltip .VerifLevel .VerifShopName}} data-tooltip="{{.}}"{{end}}>{{trustLabel .VerifLevel}}</span>
       </div>
       {{with formatModMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
       {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}
@@ -97,7 +97,7 @@
         {{if .UploadCount}}
         <button class="mod-clip-btn" title="{{.UploadCount}} document{{if ne .UploadCount 1}}s{{end}}" onclick="openCarDocViewer('maintenance','{{.ID}}','{{.Name}}')">📎<span class="mod-clip-count">{{.UploadCount}}</span></button>
         {{end}}
-        <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}" data-tooltip="coming soon: shop verification!">{{trustLabel .UploadCount}}</span>
+        <span class="trust-badge trust-badge--{{trustLevel .VerifLevel}}"{{with trustTooltip .VerifLevel .VerifShopName}} data-tooltip="{{.}}"{{end}}>{{trustLabel .VerifLevel}}</span>
       </div>
       {{with formatMaintMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
       {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}

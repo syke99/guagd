@@ -17,13 +17,14 @@ type HQMember struct {
 }
 
 type HQPageData struct {
-	Username        string
-	IsOwner         bool
-	IsAuthenticated bool
-	MemberCount     int
-	Members         []HQMember
-	Layout          []LayoutItem
-	SafeCSS         template.CSS
-	CoverPhotoURL   string
-	AvatarURL       string
+	Username           string
+	IsOwner            bool
+	IsAuthenticated    bool
+	AccountShortID     string
+	MemberCount        int
+	Members            []HQMember
+	Layout             []LayoutItem
+	SafeCSS            template.CSS
+	CoverPhotoURL      string
+	AvatarURL          string
 }

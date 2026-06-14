@@ -42,6 +42,21 @@ var defaultLayout = []models.LayoutItem{
 	{Component: "member-grid", X: 0, Y: 3, W: 12, H: 8},
 }
 
+func (h *HQClient) getAccountIDBySupertokensID(ctx context.Context, supertokensID string) (string, error) {
+	var id string
+	err := h.db.QueryRow(ctx,
+		`SELECT id::text FROM accounts WHERE supertokens_id = $1`,
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return pgx.ErrNoRows
+			}
+			return rows.Scan(&id)
+		},
+		supertokensID,
+	)
+	return id, err
+}
+
 func (h *HQClient) getUserByUsername(ctx context.Context, username string) (*models.HQUser, error) {
 	var user models.HQUser
 	err := h.db.QueryRow(

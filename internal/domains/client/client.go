@@ -13,6 +13,7 @@ import (
 	"guagd/internal/domains/client/pages/garage"
 	"guagd/internal/domains/client/pages/hq"
 	landingpkg "guagd/internal/domains/client/pages/landing"
+	requestspkg "guagd/internal/domains/client/pages/requests"
 	"guagd/internal/pkg/db"
 	"guagd/internal/pkg/middleware"
 	"guagd/internal/pkg/sessions"
@@ -37,6 +38,7 @@ type client struct {
 	hq        *hq.HQClient
 	landing   *landingpkg.LandingClient
 	car       *carpkg.CarPageClient
+	requests  *requestspkg.RequestsClient
 }
 
 func NewClient(baseRoute, publicURL string, db db.DB, store *storage.Client, heroBuildID, heroGarageID, heroClubID string) *client {
@@ -54,6 +56,7 @@ func NewClient(baseRoute, publicURL string, db db.DB, store *storage.Client, her
 		hq:        hq.NewHQClient(db, store, sg),
 		landing:   lc,
 		car:       carpkg.NewCarPageClient(db, store, sg),
+		requests:  requestspkg.NewRequestsClient(db, store, sg),
 	}
 }
 
@@ -179,6 +182,20 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 			}
 			c.car.CarPage(w, r)
 		},
+		"/requests": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("HX-Request") != "true" {
+				http.ServeFileFS(w, r, app, "app/index.html")
+				return
+			}
+			c.requests.RequestsPage(w, r)
+		},
+		"GET /api/v1/driver/requests":              c.requests.ListDriverRequests,
+		"POST /api/v1/driver/requests/create":       middleware.RequireAuth(c.requests.CreateRequest),
+		"GET /api/v1/driver/requests/wizard/cars":   c.requests.WizardCarsFragment,
+		"GET /api/v1/driver/requests/wizard/records": c.requests.WizardRecordsFragment,
+		"GET /api/v1/driver/requests/wizard/shops":  c.requests.ShopSearchFragment,
+		"GET /api/v1/shop/requests":                 c.requests.ListShopRequests,
+		"POST /api/v1/shop/requests/respond":        middleware.RequireAuth(c.requests.RespondToItems),
 	}
 
 	return routes

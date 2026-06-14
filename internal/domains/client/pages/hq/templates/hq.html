@@ -445,6 +445,9 @@ function adjustMemberCount(delta) {
   <button id="btn-style" class="nav-menu-subitem" onclick="setEditMode('style')">Style</button>
 </div>
 {{end}}
+{{if .AccountShortID}}
+<a href="/requests?u={{.AccountShortID}}" class="nav-menu-item">Requests</a>
+{{end}}
 {{end}}
 
 {{define "hq-profile-header"}}

@@ -10,4 +10,6 @@ type Mod struct {
 	Cost             int    `json:"cost"               db:"cost"`
 	Notes            string `json:"notes"              db:"notes"`
 	UploadCount      int    `json:"upload_count"       db:"upload_count"`
+	VerifLevel       string `json:"verif_level"        db:"verif_level"`
+	VerifShopName    string `json:"verif_shop_name"    db:"verif_shop_name"`
 }

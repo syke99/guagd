@@ -28,17 +28,35 @@ var carFuncMap = template.FuncMap{
 	"verifiedTooltip": func(v models.VerificationCounts) string {
 		return fmt.Sprintf("%d Documented · %d Verified · %d Performed", v.Documented, v.Verified, v.Performed)
 	},
-	"trustLevel": func(count int) string {
-		if count > 0 {
-			return "documented"
+	"trustLevel": func(level string) string {
+		switch level {
+		case "documented", "performed", "verified":
+			return level
+		default:
+			return "reported"
 		}
-		return "reported"
 	},
-	"trustLabel": func(count int) string {
-		if count > 0 {
+	"trustLabel": func(level string) string {
+		switch level {
+		case "documented":
 			return "Documented"
+		case "performed":
+			return "Performed"
+		case "verified":
+			return "Verified"
+		default:
+			return "Reported"
 		}
-		return "Reported"
+	},
+	"trustTooltip": func(level, shopName string) string {
+		switch level {
+		case "performed":
+			return "Performed by @" + shopName
+		case "verified":
+			return "Verified by @" + shopName
+		default:
+			return ""
+		}
 	},
 	"formatModMeta": func(m models.Mod) string {
 		var parts []string
@@ -183,11 +201,15 @@ func (c *CarPageClient) getMods(ctx context.Context, carID string) ([]models.Mod
 		        COALESCE(cm.mileage_at_install, 0)   AS mileage_at_install,
 		        COALESCE(cm.cost, 0)                 AS cost,
 		        COALESCE(cm.notes, '')               AS notes,
-		        COUNT(mu.id)                         AS upload_count
+		        COUNT(mu.id)                         AS upload_count,
+		        COALESCE(cv.level, 'reported')        AS verif_level,
+		        COALESCE(sa.username, '')             AS verif_shop_name
 		 FROM car_mods cm
-		 LEFT JOIN car_uploads mu ON mu.mod_id = cm.id
+		 LEFT JOIN car_uploads       mu ON mu.mod_id = cm.id
+		 LEFT JOIN car_verifications cv ON cv.mod_id = cm.id
+		 LEFT JOIN accounts          sa ON sa.id     = cv.shop_id
 		 WHERE cm.car_id = $1
-		 GROUP BY cm.id
+		 GROUP BY cm.id, cv.level, sa.username
 		 ORDER BY cm.created_at ASC`,
 		db.WithResultsOf(&mods),
 		carID,
@@ -206,11 +228,15 @@ func (c *CarPageClient) getMaintenance(ctx context.Context, carID string) ([]mod
 		        COALESCE(cm.mileage, 0)             AS mileage,
 		        COALESCE(cm.cost, 0)                AS cost,
 		        COALESCE(cm.notes, '')              AS notes,
-		        COUNT(cu.id)                        AS upload_count
+		        COUNT(cu.id)                        AS upload_count,
+		        COALESCE(cv.level, 'reported')       AS verif_level,
+		        COALESCE(sa.username, '')            AS verif_shop_name
 		 FROM car_maintenance cm
-		 LEFT JOIN car_uploads cu ON cu.maintenance_id = cm.id
+		 LEFT JOIN car_uploads       cu ON cu.maintenance_id = cm.id
+		 LEFT JOIN car_verifications cv ON cv.maintenance_id = cm.id
+		 LEFT JOIN accounts          sa ON sa.id             = cv.shop_id
 		 WHERE cm.car_id = $1
-		 GROUP BY cm.id
+		 GROUP BY cm.id, cv.level, sa.username
 		 ORDER BY cm.created_at ASC`,
 		db.WithResultsOf(&records),
 		carID,
