@@ -563,18 +563,34 @@ func (g *GarageClient) addCarUpload(ctx context.Context, accountID, modID, objec
 		return models.CarUpload{}, fmt.Errorf("mod not found")
 	}
 
+	tx, err := g.db.BeginTx(ctx)
+	if err != nil {
+		return models.CarUpload{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var upload models.CarUpload
-	err = g.db.QueryRow(ctx,
+	if err = tx.QueryRow(ctx,
 		`INSERT INTO car_uploads (mod_id, object_key, name, upload_type, content_type)
 		 VALUES ($1::uuid, $2, $3, $4, $5)
 		 RETURNING id::text, mod_id::text AS mod_id, object_key, name, upload_type, content_type`,
 		db.WithResultOf(&upload),
 		modID, objectKey, name, uploadType, contentType,
-	)
-	if err == nil {
-		upload.URL = g.storage.CarFileURL(upload.ObjectKey)
+	); err != nil {
+		return models.CarUpload{}, err
 	}
-	return upload, err
+	if err = tx.Exec(ctx,
+		`UPDATE car_verifications SET level = 'documented', updated_at = NOW()
+		 WHERE mod_id = $1::uuid AND level = 'reported'`,
+		modID,
+	); err != nil {
+		return models.CarUpload{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return models.CarUpload{}, err
+	}
+	upload.URL = g.storage.CarFileURL(upload.ObjectKey)
+	return upload, nil
 }
 
 func (g *GarageClient) removeCarUpload(ctx context.Context, accountID, uploadID string) error {
@@ -627,8 +643,14 @@ func (g *GarageClient) addMod(ctx context.Context, accountID, carID string, m mo
 		m.InstallDate = m.InstallDate + "-01"
 	}
 
+	tx, err := g.db.BeginTx(ctx)
+	if err != nil {
+		return models.Mod{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var created models.Mod
-	err = g.db.QueryRow(ctx,
+	if err = tx.QueryRow(ctx,
 		`INSERT INTO car_mods (car_id, name, category, install_date, mileage_at_install, cost, notes)
 		 VALUES ($1, $2, $3, NULLIF($4,'')::date, NULLIF($5,0), NULLIF($6,0), NULLIF($7,''))
 		 RETURNING id::text,
@@ -642,8 +664,16 @@ func (g *GarageClient) addMod(ctx context.Context, accountID, carID string, m mo
 		           0                                 AS upload_count`,
 		db.WithResultOf(&created),
 		carID, m.Name, m.Category, m.InstallDate, m.MileageAtInstall, m.Cost, m.Notes,
-	)
-	return created, err
+	); err != nil {
+		return models.Mod{}, err
+	}
+	if err = tx.Exec(ctx,
+		`INSERT INTO car_verifications (mod_id, level) VALUES ($1::uuid, 'reported')`,
+		created.ID,
+	); err != nil {
+		return models.Mod{}, err
+	}
+	return created, tx.Commit(ctx)
 }
 
 func (g *GarageClient) removeMod(ctx context.Context, accountID, modID string) error {
@@ -696,8 +726,14 @@ func (g *GarageClient) addMaintenance(ctx context.Context, accountID, carID stri
 		return models.Maintenance{}, fmt.Errorf("car not found")
 	}
 
+	tx, err := g.db.BeginTx(ctx)
+	if err != nil {
+		return models.Maintenance{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var created models.Maintenance
-	err = g.db.QueryRow(ctx,
+	if err = tx.QueryRow(ctx,
 		`INSERT INTO car_maintenance (car_id, name, category, service_date, mileage, cost, notes)
 		 VALUES ($1, $2, $3, NULLIF($4,'')::date, NULLIF($5,0), NULLIF($6,0), NULLIF($7,''))
 		 RETURNING id::text,
@@ -711,8 +747,16 @@ func (g *GarageClient) addMaintenance(ctx context.Context, accountID, carID stri
 		           0                               AS upload_count`,
 		db.WithResultOf(&created),
 		carID, m.Name, m.Category, m.ServiceDate, m.Mileage, m.Cost, m.Notes,
-	)
-	return created, err
+	); err != nil {
+		return models.Maintenance{}, err
+	}
+	if err = tx.Exec(ctx,
+		`INSERT INTO car_verifications (maintenance_id, level) VALUES ($1::uuid, 'reported')`,
+		created.ID,
+	); err != nil {
+		return models.Maintenance{}, err
+	}
+	return created, tx.Commit(ctx)
 }
 
 func (g *GarageClient) removeMaintenance(ctx context.Context, accountID, recordID string) error {
@@ -758,16 +802,32 @@ func (g *GarageClient) addMaintenanceUpload(ctx context.Context, accountID, main
 		return models.CarUpload{}, fmt.Errorf("maintenance record not found")
 	}
 
+	tx, err := g.db.BeginTx(ctx)
+	if err != nil {
+		return models.CarUpload{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var upload models.CarUpload
-	err = g.db.QueryRow(ctx,
+	if err = tx.QueryRow(ctx,
 		`INSERT INTO car_uploads (maintenance_id, object_key, name, upload_type, content_type)
 		 VALUES ($1::uuid, $2, $3, $4, $5)
 		 RETURNING id::text, maintenance_id::text AS mod_id, object_key, name, upload_type, content_type`,
 		db.WithResultOf(&upload),
 		maintenanceID, objectKey, name, uploadType, contentType,
-	)
-	if err == nil {
-		upload.URL = g.storage.CarFileURL(upload.ObjectKey)
+	); err != nil {
+		return models.CarUpload{}, err
 	}
-	return upload, err
+	if err = tx.Exec(ctx,
+		`UPDATE car_verifications SET level = 'documented', updated_at = NOW()
+		 WHERE maintenance_id = $1::uuid AND level = 'reported'`,
+		maintenanceID,
+	); err != nil {
+		return models.CarUpload{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return models.CarUpload{}, err
+	}
+	upload.URL = g.storage.CarFileURL(upload.ObjectKey)
+	return upload, nil
 }

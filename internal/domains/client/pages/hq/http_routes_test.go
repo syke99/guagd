@@ -23,12 +23,22 @@ type mockDB struct{}
 func (m *mockDB) Exec(_ context.Context, _ string, _ ...any) error                  { return nil }
 func (m *mockDB) Query(_ context.Context, _ string, _ db.Results, _ ...any) error   { return nil }
 func (m *mockDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return nil }
+func (m *mockDB) BeginTx(_ context.Context) (db.Tx, error)                          { return &mockTx{}, nil }
+
+type mockTx struct{}
+
+func (t *mockTx) Exec(_ context.Context, _ string, _ ...any) error                  { return nil }
+func (t *mockTx) Query(_ context.Context, _ string, _ db.Results, _ ...any) error   { return nil }
+func (t *mockTx) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return nil }
+func (t *mockTx) Commit(_ context.Context) error                                     { return nil }
+func (t *mockTx) Rollback(_ context.Context) error                                   { return nil }
 
 type errDB struct{}
 
 func (m *errDB) Exec(_ context.Context, _ string, _ ...any) error                  { return errors.New("db error") }
 func (m *errDB) Query(_ context.Context, _ string, _ db.Results, _ ...any) error   { return errors.New("db error") }
 func (m *errDB) QueryRow(_ context.Context, _ string, _ db.Result, _ ...any) error { return errors.New("db error") }
+func (m *errDB) BeginTx(_ context.Context) (db.Tx, error)                          { return nil, errors.New("db error") }
 
 type mockSession struct {
 	userID  string
