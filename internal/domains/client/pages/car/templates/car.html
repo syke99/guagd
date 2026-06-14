@@ -72,7 +72,7 @@
     <div class="car-page-stats">
       <div class="stat"><div class="stat-val">{{len .Mods}}</div><div class="stat-label">Mods</div></div>
       <div class="stat"><div class="stat-val">{{len .Maintenance}}</div><div class="stat-label">Maintenance</div></div>
-      <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
+      <div class="stat has-tooltip" data-tooltip="{{verifiedTooltip .Verifications}}"><div class="stat-val">{{.Verifications.Total}}</div><div class="stat-label">Verified</div></div>
       <div class="stat"><div class="stat-val">{{len .Docs}}</div><div class="stat-label">Docs</div></div>
     </div>
 

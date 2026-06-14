@@ -43,6 +43,9 @@ var carModalFuncMap = template.FuncMap{
 		}
 		return id[:8]
 	},
+	"verifiedTooltip": func(v models.VerificationCounts) string {
+		return fmt.Sprintf("%d Documented · %d Verified · %d Performed", v.Documented, v.Verified, v.Performed)
+	},
 	"trustLevel": func(count int) string {
 		if count > 0 {
 			return "documented"
@@ -782,6 +785,22 @@ func (g *GarageClient) getMaintenanceUploads(ctx context.Context, maintenanceID 
 		uploads[i].URL = g.storage.CarFileURL(uploads[i].ObjectKey)
 	}
 	return uploads, err
+}
+
+func (g *GarageClient) getVerificationCounts(ctx context.Context, carID string) (models.VerificationCounts, error) {
+	var counts models.VerificationCounts
+	err := g.db.QueryRow(ctx,
+		`SELECT
+		    COUNT(*) FILTER (WHERE level = 'documented') AS documented,
+		    COUNT(*) FILTER (WHERE level = 'verified')   AS verified,
+		    COUNT(*) FILTER (WHERE level = 'performed')  AS performed
+		 FROM car_verifications
+		 WHERE mod_id         IN (SELECT id FROM car_mods         WHERE car_id = $1::uuid)
+		    OR maintenance_id IN (SELECT id FROM car_maintenance  WHERE car_id = $1::uuid)`,
+		db.WithResultOf(&counts),
+		carID,
+	)
+	return counts, err
 }
 
 func (g *GarageClient) addMaintenanceUpload(ctx context.Context, accountID, maintenanceID, objectKey, name, uploadType, contentType string) (models.CarUpload, error) {

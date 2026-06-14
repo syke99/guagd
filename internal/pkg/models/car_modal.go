@@ -7,6 +7,7 @@ type CarModalData struct {
 	TotalPhotoCount int        // all photos including primary
 	Mods            []Mod
 	Maintenance     []Maintenance
+	Verifications   VerificationCounts
 	IsOwner         bool
 	MaxPhotos       int
 }

@@ -54,6 +54,11 @@ func (c *CarPageClient) CarPage(w http.ResponseWriter, r *http.Request) {
 		docs = []models.CarPageDoc{}
 	}
 
+	verifications, err := c.getVerificationCounts(ctx, car.ID)
+	if err != nil {
+		log.Printf("carPage: get verifications: %s", err)
+	}
+
 	sessionContainer, _ := c.sessions.GetOptionalSession(r, w)
 
 	data := models.CarPageData{
@@ -63,6 +68,7 @@ func (c *CarPageClient) CarPage(w http.ResponseWriter, r *http.Request) {
 		Mods:            mods,
 		Maintenance:     maintenance,
 		Docs:            docs,
+		Verifications:   verifications,
 		AvatarURL:       owner.AvatarURL,
 		IsAuthenticated: sessionContainer != nil,
 	}

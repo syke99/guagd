@@ -1,5 +1,15 @@
 package models
 
+type VerificationCounts struct {
+	Documented int `db:"documented"`
+	Verified   int `db:"verified"`
+	Performed  int `db:"performed"`
+}
+
+func (v VerificationCounts) Total() int {
+	return v.Documented + v.Verified + v.Performed
+}
+
 type CarPageOwner struct {
 	Username  string `db:"username"`
 	AvatarURL string `db:"-"`
@@ -24,6 +34,7 @@ type CarPageData struct {
 	Mods            []Mod
 	Maintenance     []Maintenance
 	Docs            []CarPageDoc
+	Verifications   VerificationCounts
 	AvatarURL       string
 	IsAuthenticated bool
 }

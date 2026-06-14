@@ -399,6 +399,7 @@ func (g *GarageClient) CarModalFragment(w http.ResponseWriter, r *http.Request) 
 	photoCh := make(chan result[[]models.CarPhoto], 1)
 	modCh := make(chan result[[]models.Mod], 1)
 	maintCh := make(chan result[[]models.Maintenance], 1)
+	verifCh := make(chan result[models.VerificationCounts], 1)
 
 	go func() {
 		v, e := g.getCarPhotos(r.Context(), carID)
@@ -418,10 +419,15 @@ func (g *GarageClient) CarModalFragment(w http.ResponseWriter, r *http.Request) 
 		}
 		maintCh <- result[[]models.Maintenance]{v, e}
 	}()
+	go func() {
+		v, e := g.getVerificationCounts(r.Context(), carID)
+		verifCh <- result[models.VerificationCounts]{v, e}
+	}()
 
 	photos := (<-photoCh).val
 	mods := (<-modCh).val
 	maintenance := (<-maintCh).val
+	verifications := (<-verifCh).val
 
 	var primary *models.CarPhoto
 	var nonPrimary []models.CarPhoto
@@ -439,6 +445,7 @@ func (g *GarageClient) CarModalFragment(w http.ResponseWriter, r *http.Request) 
 		TotalPhotoCount: len(photos),
 		Mods:            mods,
 		Maintenance:     maintenance,
+		Verifications:   verifications,
 		IsOwner:         isOwner,
 		MaxPhotos:       10,
 	}

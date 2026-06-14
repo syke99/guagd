@@ -396,7 +396,36 @@ h1 em {
   gap: 20px;
 }
 
-.stat { text-align: right; }
+.stat { text-align: right; position: relative; }
+.stat.has-tooltip { cursor: default; }
+.stat.has-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  right: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 6px;
+  z-index: 1000;
+  pointer-events: none;
+}
+.stat.has-tooltip:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  right: 12px;
+  border: 4px solid transparent;
+  border-top-color: var(--border);
+  z-index: 1001;
+  pointer-events: none;
+}
 .stat-val { font-size: 15px; font-weight: 700; color: var(--accent); }
 .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 1px; }
 

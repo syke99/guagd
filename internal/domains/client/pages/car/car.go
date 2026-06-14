@@ -3,6 +3,7 @@ package car
 import (
 	"context"
 	"embed"
+	"fmt"
 	"html/template"
 	"strconv"
 	"strings"
@@ -24,6 +25,9 @@ var carPageTemplate = template.Must(
 )
 
 var carFuncMap = template.FuncMap{
+	"verifiedTooltip": func(v models.VerificationCounts) string {
+		return fmt.Sprintf("%d Documented · %d Verified · %d Performed", v.Documented, v.Verified, v.Performed)
+	},
 	"trustLevel": func(count int) string {
 		if count > 0 {
 			return "documented"
@@ -222,6 +226,22 @@ type rawDoc struct {
 	ContentType     string `db:"content_type"`
 	ModName         string `db:"mod_name"`
 	MaintenanceName string `db:"maintenance_name"`
+}
+
+func (c *CarPageClient) getVerificationCounts(ctx context.Context, carID string) (models.VerificationCounts, error) {
+	var counts models.VerificationCounts
+	err := c.db.QueryRow(ctx,
+		`SELECT
+		    COUNT(*) FILTER (WHERE level = 'documented') AS documented,
+		    COUNT(*) FILTER (WHERE level = 'verified')   AS verified,
+		    COUNT(*) FILTER (WHERE level = 'performed')  AS performed
+		 FROM car_verifications
+		 WHERE mod_id         IN (SELECT id FROM car_mods        WHERE car_id = $1::uuid)
+		    OR maintenance_id IN (SELECT id FROM car_maintenance WHERE car_id = $1::uuid)`,
+		db.WithResultOf(&counts),
+		carID,
+	)
+	return counts, err
 }
 
 func (c *CarPageClient) getDocs(ctx context.Context, carID string) ([]models.CarPageDoc, error) {
