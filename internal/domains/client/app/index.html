@@ -36,7 +36,7 @@
   var frag;
   if (path.startsWith('/garage/') || path.startsWith('/hq/')) {
     frag = path;
-  } else if (path === '/cars') {
+  } else if (path === '/cars' || path === '/requests') {
     frag = path + location.search;
   } else {
     frag = routes[path] || '/pages/landing/landing.html';
