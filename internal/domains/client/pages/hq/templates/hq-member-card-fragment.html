@@ -1,0 +1,16 @@
+{{define "hq-member-card-fragment.html"}}
+<div class="member-card-wrap">
+  <a class="member-card" href="/garage/@{{.Member.Username}}">
+    <div class="member-card-thumb">
+      {{if .Member.CoverPhotoURL}}<img src="{{.Member.CoverPhotoURL}}" style="width:100%;height:100%;object-fit:cover;border-radius:8px 8px 0 0">{{else}}<div class="member-card-avatar">👤</div>{{end}}
+    </div>
+    <div class="member-card-info">
+      <div class="member-card-avatar-circle">
+        {{if .Member.AvatarURL}}<img src="{{.Member.AvatarURL}}">{{else}}👤{{end}}
+      </div>
+      <div class="member-card-username">@{{.Member.Username}}</div>
+    </div>
+  </a>
+  {{if .IsOwner}}<button class="member-remove-btn" onclick="removeMember('{{.Member.Username}}',this)">✕</button>{{end}}
+</div>
+{{end}}

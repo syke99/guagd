@@ -182,7 +182,7 @@ const grid = GridStack.init({
 });
 
 let editMode = null;
-let currentModalCar = null;
+let currentModalCar = null; // slim: {id, year, make, model, trim, mileage}
 
 {{if .IsOwner}}
 function toggleEdit() {
@@ -232,7 +232,7 @@ function applyMode(mode) {
   if (avatarEdit) avatarEdit.style.display = mode !== null ? 'flex' : 'none';
   if (avatarRemove) avatarRemove.style.display = (mode !== null && !!document.getElementById('profile-avatar-img')) ? 'flex' : 'none';
 
-  if (currentModalCar) renderCarModal(currentModalCar);
+  if (activeCarId) refreshCarModal(activeCarId);
 }
 
 function toggleAddCar() {
@@ -289,7 +289,7 @@ function addCar() {
     wrap.innerHTML =
       `<div class="car-card" onclick="openCarModal(this.closest('.car-card-wrap'))">` +
         `<div class="car-card-thumb"><div class="car-card-icon">🚗</div></div>` +
-        `<div class="car-card-info"><div class="car-card-name">${name}</div>${sub}</div>` +
+        `<div class="car-card-info"><div class="car-card-name">${escHtml(name)}</div>${sub}</div>` +
       `</div>` +
       `<button class="car-remove-btn" onclick="removeCar('${car.id}',this)">✕</button>`;
     carGrid && carGrid.appendChild(wrap);
@@ -372,7 +372,7 @@ async function submitCarEdit() {
     trim: updated.trim || '', mileage: updated.mileage || 0,
   });
   closeCarEditModal();
-  renderCarModal(currentModalCar);
+  refreshCarModal(carId);
 }
 
 function adjustCarCount(delta) {
@@ -470,7 +470,6 @@ function saveStyle() {
 let uploadCtx = null;
 
 function openUploadModal(ctx) {
-  // ctx: { entityType, carId, isPrimary, title, maxPhotos, currentCount, onSuccess }
   uploadCtx = ctx;
   const limitMsg = document.getElementById('upload-limit-msg');
   const dropZone = document.getElementById('upload-drop-zone');
@@ -574,29 +573,76 @@ let currentBuildTab = 'mods';
 
 function openCarModal(wrap) {
   const id = wrap.dataset.id;
-  const year = parseInt(wrap.dataset.year, 10);
-  const make = wrap.dataset.make;
-  const model = wrap.dataset.model;
-  const trim = wrap.dataset.trim || '';
-  const mileage = parseInt(wrap.dataset.mileage, 10) || 0;
-  const primaryURL = wrap.dataset.primaryPhotoUrl || '';
   activeCarId = id;
-  currentModalCar = {id, year, make, model, trim, mileage, primaryURL, photos: null, mods: null, maintenance: null};
-
-  renderCarModal(currentModalCar);
+  currentModalCar = {
+    id,
+    year:    parseInt(wrap.dataset.year, 10),
+    make:    wrap.dataset.make,
+    model:   wrap.dataset.model,
+    trim:    wrap.dataset.trim || '',
+    mileage: parseInt(wrap.dataset.mileage, 10) || 0,
+  };
+  document.getElementById('car-modal-card').innerHTML = '<div class="mod-empty" style="padding:24px;text-align:center">Loading…</div>';
   document.getElementById('car-modal').style.display = 'flex';
   history.replaceState(null, '', window.location.pathname + '?car=' + id.slice(0, 8));
+  refreshCarModal(id);
+}
 
-  Promise.all([
-    fetch('/api/v1/garage/cars/photos?car_id=' + id).then(r => r.ok ? r.json() : []),
-    fetch('/api/v1/garage/cars/mods?car_id=' + id).then(r => r.ok ? r.json() : []),
-    fetch('/api/v1/garage/cars/maintenance?car_id=' + id).then(r => r.ok ? r.json() : []),
-  ]).then(([photos, mods, maintenance]) => {
-    if (activeCarId === id) {
-      currentModalCar = Object.assign({}, currentModalCar, {photos, mods, maintenance});
-      renderCarModal(currentModalCar);
-    }
-  });
+function refreshCarModal(carId) {
+  return fetch('/fragments/car?car_id=' + carId)
+    .then(r => r.ok ? r.text() : Promise.reject())
+    .then(html => {
+      if (activeCarId !== carId) return;
+      document.getElementById('car-modal-card').innerHTML = html;
+      if (currentBuildTab !== 'mods') switchBuildTab(carId, currentBuildTab);
+      initPhotoStrip(carId);
+    })
+    .catch(() => {});
+}
+
+const _stripOffset = {};
+
+function initPhotoStrip(carId) {
+  _stripOffset[carId] = 0;
+  const strip = document.getElementById('photo-strip-' + carId);
+  if (!strip) return;
+  const prev = strip.querySelector('.photo-strip-prev');
+  const next = strip.querySelector('.photo-strip-next');
+  const photos = Array.from(strip.querySelectorAll('.strip-photo'));
+  const total = photos.length;
+
+  // Remove any previously injected empty placeholders
+  strip.querySelectorAll('.strip-empty').forEach(el => el.remove());
+
+  // Pad to 3 visible slots with empty placeholders inserted before the next button
+  const emptyNeeded = Math.max(0, 3 - total);
+  for (let i = 0; i < emptyNeeded; i++) {
+    const el = document.createElement('div');
+    el.className = 'photo-thumb strip-empty';
+    strip.insertBefore(el, next);
+  }
+
+  // Show first 3 photos, hide the rest
+  photos.forEach((p, i) => { p.style.display = i < 3 ? '' : 'none'; });
+
+  // Prev always disabled at offset 0; next enabled only when >3 photos
+  if (prev) prev.disabled = true;
+  if (next) next.disabled = total <= 3;
+}
+
+function photoStripNav(carId, dir) {
+  const strip = document.getElementById('photo-strip-' + carId);
+  if (!strip) return;
+  const photos = Array.from(strip.querySelectorAll('.strip-photo'));
+  const total = photos.length;
+  if (total <= 3) return;
+  const offset = Math.max(0, Math.min((_stripOffset[carId] || 0) + dir, total - 3));
+  _stripOffset[carId] = offset;
+  photos.forEach((p, i) => { p.style.display = (i >= offset && i < offset + 3) ? '' : 'none'; });
+  const prev = strip.querySelector('.photo-strip-prev');
+  const next = strip.querySelector('.photo-strip-next');
+  if (prev) prev.disabled = offset <= 0;
+  if (next) next.disabled = offset + 3 >= total;
 }
 
 function copyCar(btn, shortId) {
@@ -634,252 +680,39 @@ function switchBuildTab(carId, tab, btn) {
   if (maintActions) maintActions.style.display = tab === 'maintenance' ? '' : 'none';
 }
 
-function renderCarModal({id, year, make, model, trim, mileage, primaryURL, photos, mods, maintenance}) {
-  const canEdit = isOwner && editMode !== null;
-  const canManageMods = isOwner;
+// ── Mod / maintenance CRUD ────────────────────────────────────
 
-  const coverClick = canEdit
-    ? `onclick="openUploadModal({entityType:'car',carId:'${id}',isPrimary:true,title:'${primaryURL ? 'Replace' : 'Add'} Cover Photo',confirm:confirmCarCover,onSuccess:key=>updateCarCover('${id}',key)})" style="cursor:pointer"`
-    : '';
-
-  const coverInner = primaryURL
-    ? `<img src="${primaryURL}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:1">`
-    : (canEdit ? `<div class="card-cover-inner"><div class="card-cover-icon">📷</div><div class="card-cover-label">Add Cover Photo</div></div>` : `<div class="card-cover-inner"><div class="card-cover-icon">📷</div><div class="card-cover-label">Cover Photo</div></div>`);
-
-  const primaryPhoto = photos && photos.find(p => p.is_primary);
-  const coverRemoveBtn = (canEdit && primaryURL && primaryPhoto)
-    ? `<button class="cover-delete-btn" onclick="event.stopPropagation();deleteCarPhoto('${primaryPhoto.id}','${id}')">✕</button>`
-    : '';
-
-  const photoStrip = buildPhotoStrip(id, photos, canEdit);
-
-  document.getElementById('car-modal-card').innerHTML = `
-    <div class="card-cover" ${coverClick}>${coverInner}${coverRemoveBtn}</div>
-    <div class="card-body">
-      <div class="build-card-header">
-        <div style="min-width:0;flex:1">
-          <div style="display:flex;align-items:center;gap:6px">
-            <div class="build-car-name">${escHtml(year + ' ' + make + ' ' + model)}</div>
-            ${canManageMods ? `<button class="car-edit-btn" onclick="openCarEditModal('${id}')" title="Edit car info">✏</button>` : ''}
-          </div>
-          <div class="build-car-sub">${trim ? escHtml(trim) : 'Build Details'}</div>
-        </div>
-        <div class="build-stats">
-          <div class="stat"><div class="stat-val">${mods ? mods.length : '—'}</div><div class="stat-label">Mods</div></div>
-          <div class="stat"><div class="stat-val">${maintenance ? maintenance.length : '—'}</div><div class="stat-label">Maintenance</div></div>
-          <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
-        </div>
-      </div>
-      <div class="build-tabs-container">
-        <div class="build-tab-bar">
-          <button class="build-tab active" onclick="switchBuildTab('${id}','mods',this)">Mods</button>
-          <button class="build-tab" onclick="switchBuildTab('${id}','maintenance',this)">Maintenance</button>
-        </div>
-        <div class="build-tab-content">
-          <div id="build-tab-mods-${id}" class="build-tab-panel">
-            ${buildModRows(id, mods, canManageMods)}
-          </div>
-          <div id="build-tab-maintenance-${id}" class="build-tab-panel" style="display:none">
-            ${buildMaintenanceRows(id, maintenance, canManageMods)}
-          </div>
-        </div>
-        ${canManageMods ? `
-          <div id="build-tab-actions-mods-${id}">${buildModAddForm(id)}</div>
-          <div id="build-tab-actions-maintenance-${id}" style="display:none">${buildMaintenanceAddForm(id)}</div>
-        ` : ''}
-      </div>
-    </div>
-    ${photoStrip}
-    <div class="build-url" style="margin:12px 0 0">
-      <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'${id.slice(0,8)}')">Share</button>
-    </div>
-  `;
-  if (currentBuildTab !== 'mods') switchBuildTab(id, currentBuildTab);
+function toggleAddMod(carId) {
+  const form = document.getElementById('add-mod-form-' + carId);
+  if (!form) return;
+  const open = form.style.display !== 'none';
+  form.style.display = open ? 'none' : 'block';
+  if (!open) setTimeout(() => document.getElementById('mod-name-' + carId)?.focus(), 50);
 }
 
-function buildPhotoStrip(carId, photos, canEdit) {
-  const MAX_PHOTOS = 10;
-  const stripPhotos = (photos || []).filter(p => !p.is_primary);
-  const thumbs = stripPhotos.slice(0, 4).map(p => {
-    const deleteBtn = canEdit
-      ? `<button class="photo-thumb-delete" onclick="event.stopPropagation();deleteCarPhoto('${p.id}','${carId}')">✕</button>`
-      : '';
-    return `<div class="photo-thumb" style="position:relative;overflow:hidden">${deleteBtn}<img class="photo-thumb-img" src="${p.url}"></div>`;
-  }).join('');
+async function submitAddMod(carId) {
+  const nameEl = document.getElementById('mod-name-' + carId);
+  const name = nameEl?.value.trim();
+  if (!name) { nameEl?.focus(); return; }
+  const category = document.getElementById('mod-cat-' + carId)?.value || 'Other';
+  const install_date = document.getElementById('mod-date-' + carId)?.value || '';
+  const mileage_at_install = parseInt(document.getElementById('mod-mileage-' + carId)?.value) || 0;
+  const cost = parseInt(document.getElementById('mod-cost-' + carId)?.value) || 0;
+  const notes = document.getElementById('mod-notes-' + carId)?.value.trim() || '';
 
-  const remaining = stripPhotos.length > 4
-    ? `<div class="photo-thumb-more">+${stripPhotos.length - 4}<small>photos</small></div>`
-    : '';
-
-  const totalCount = photos ? photos.length : 0;
-  const addBtn = canEdit
-    ? `<div class="photo-thumb-add" onclick="openUploadModal({entityType:'car',carId:'${carId}',isPrimary:false,title:'Add Photo',maxPhotos:${MAX_PHOTOS},currentCount:${totalCount},confirm:confirmCarPhoto,onSuccess:key=>onCarPhotoAdded('${carId}',key)})">+</div>`
-    : '';
-
-  if (!photos) {
-    return `<div class="photo-strip">${addBtn}</div>`;
-  }
-
-  return `<div class="photo-strip">${thumbs}${remaining}${addBtn}</div>`;
+  const res = await fetch('/api/v1/garage/cars/mods/add?car_id=' + carId, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, category: category || 'Other', install_date, mileage_at_install, cost, notes}),
+  });
+  if (!res.ok) return;
+  refreshCarModal(carId);
 }
 
-// ── Mod list ──────────────────────────────────────────────────
-
-const MOD_CATEGORIES = ['Engine','Intake','Exhaust','Turbo/FI','Suspension','Wheels','Tires','Brakes','Exterior','Interior','Electronics','Transmission','Cooling','Fuel','Tuning','Safety','Other'];
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function formatModDate(dateStr) {
-  if (!dateStr) return '';
-  const [year, month] = dateStr.split('-');
-  return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', {month: 'short', year: 'numeric'});
-}
-
-function formatMileage(n) { return n ? n.toLocaleString() + ' mi' : ''; }
-function formatCost(n) { return n ? '$' + n.toLocaleString() : ''; }
-
-function buildModRows(carId, mods, canEdit) {
-  let rows = '';
-  if (!mods) {
-    rows = `<div class="mod-empty">Loading...</div>`;
-  } else if (mods.length === 0) {
-    rows = `<div class="mod-empty">No mods documented yet.</div>`;
-  } else {
-    rows = mods.map(m => {
-      const meta = [formatModDate(m.install_date), formatMileage(m.mileage_at_install), formatCost(m.cost)].filter(Boolean).join(' · ');
-      const uploadCount = m.upload_count || 0;
-      const trustLevel = uploadCount > 0 ? 'documented' : 'reported';
-      const trustLabel = trustLevel === 'documented' ? 'Documented' : 'Reported';
-      const clipIcon = uploadCount > 0
-        ? `<button class="mod-clip-btn" title="${uploadCount} document${uploadCount !== 1 ? 's' : ''}" onclick="openModUploadsViewer('${escHtml(m.id)}','${escHtml(m.name)}')">📎<span class="mod-clip-count">${uploadCount}</span></button>`
-        : '';
-      const uploadBtn = canEdit
-        ? `<button class="mod-upload-btn" title="Add document" onclick="openModUploadModal('${escHtml(m.id)}')">⬆</button>`
-        : '';
-      const removeBtn = canEdit
-        ? `<button class="mod-remove-btn" onclick="removeCarMod('${escHtml(m.id)}','${carId}')">✕</button>`
-        : '';
-      return `<div class="mod-row">
-        <div style="flex:1;min-width:0">
-          <div class="mod-entry-top">
-            <span class="mod-category-badge">${escHtml(m.category)}</span>
-            <span class="mod-name">${escHtml(m.name)}</span>
-            ${clipIcon}
-            <span class="trust-badge trust-badge--${trustLevel}" data-tooltip="coming soon: shop verification!">${trustLabel}</span>
-          </div>
-          ${meta ? `<div class="mod-meta">${meta}</div>` : ''}
-          ${m.notes ? `<div class="mod-notes">${escHtml(m.notes)}</div>` : ''}
-        </div>
-        <div class="mod-row-actions">${uploadBtn}${removeBtn}</div>
-      </div>`;
-    }).join('');
-  }
-  return `<div class="mod-list-section">${rows}</div>`;
-}
-
-function buildModAddForm(carId) {
-  const catOptions = MOD_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-  return `
-    <div class="add-mod-wrap">
-      <button class="add-mod-toggle-btn" onclick="toggleAddMod('${carId}')">+ Add Mod</button>
-      <div id="add-mod-form-${carId}" class="add-mod-form" style="display:none">
-        <input id="mod-name-${carId}" class="add-mod-field" placeholder="Mod name *" autocomplete="off">
-        <div class="add-mod-row-2">
-          <select id="mod-cat-${carId}" class="add-mod-field">
-            <option value="">Category</option>
-            ${catOptions}
-          </select>
-          <div class="add-mod-labeled-field">
-            <label class="add-mod-label">Install date</label>
-            <input type="date" id="mod-date-${carId}" class="add-mod-field" style="margin:0">
-          </div>
-        </div>
-        <div class="add-mod-row-2">
-          <input type="number" id="mod-mileage-${carId}" class="add-mod-field" placeholder="Mileage at install">
-          <input type="number" id="mod-cost-${carId}" class="add-mod-field" placeholder="Cost ($)">
-        </div>
-        <textarea id="mod-notes-${carId}" class="add-mod-field" placeholder="Notes" rows="2"></textarea>
-        <div class="add-mod-actions">
-          <button class="btn-primary" style="font-size:13px;padding:8px 18px" onclick="submitAddMod('${carId}')">Save Mod</button>
-          <button class="btn-nav" style="font-size:13px;padding:8px 18px" onclick="toggleAddMod('${carId}')">Cancel</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-const MAINTENANCE_CATEGORIES = ['Oil Change','Alignment','Tire Rotation','Tire Balance','Brake Service','Fluid Change','Dyno Pull','Air Filter','Spark Plugs','Coolant Flush','Transmission Service','Differential Service','Fuel Filter','Inspection','Other'];
-
-function buildMaintenanceRows(carId, records, canManage) {
-  let rows = '';
-  if (!records) {
-    rows = `<div class="mod-empty">Loading...</div>`;
-  } else if (records.length === 0) {
-    rows = `<div class="mod-empty">No maintenance records yet.</div>`;
-  } else {
-    rows = records.map(m => {
-      const meta = [formatModDate(m.service_date), formatMileage(m.mileage), formatCost(m.cost)].filter(Boolean).join(' · ');
-      const uploadCount = m.upload_count || 0;
-      const trustLevel = uploadCount > 0 ? 'documented' : 'reported';
-      const trustLabel = trustLevel === 'documented' ? 'Documented' : 'Reported';
-      const clipIcon = uploadCount > 0
-        ? `<button class="mod-clip-btn" title="${uploadCount} document${uploadCount !== 1 ? 's' : ''}" onclick="openCarDocViewer('maintenance','${escHtml(m.id)}','${escHtml(m.name)}')">📎<span class="mod-clip-count">${uploadCount}</span></button>`
-        : '';
-      const uploadBtn = canManage
-        ? `<button class="mod-upload-btn" title="Add document" onclick="openCarDocModal('maintenance','${escHtml(m.id)}')">⬆</button>`
-        : '';
-      const removeBtn = canManage
-        ? `<button class="mod-remove-btn" onclick="removeCarMaintenance('${escHtml(m.id)}','${carId}')">✕</button>`
-        : '';
-      return `<div class="mod-row">
-        <div style="flex:1;min-width:0">
-          <div class="mod-entry-top">
-            <span class="mod-category-badge">${escHtml(m.category)}</span>
-            <span class="mod-name">${escHtml(m.name)}</span>
-            ${clipIcon}
-            <span class="trust-badge trust-badge--${trustLevel}" data-tooltip="coming soon: shop verification!">${trustLabel}</span>
-          </div>
-          ${meta ? `<div class="mod-meta">${meta}</div>` : ''}
-          ${m.notes ? `<div class="mod-notes">${escHtml(m.notes)}</div>` : ''}
-        </div>
-        <div class="mod-row-actions">${uploadBtn}${removeBtn}</div>
-      </div>`;
-    }).join('');
-  }
-  return `<div class="mod-list-section">${rows}</div>`;
-}
-
-function buildMaintenanceAddForm(carId) {
-  const catOptions = MAINTENANCE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-  return `
-    <div class="add-mod-wrap">
-      <button class="add-mod-toggle-btn" onclick="toggleAddMaintenance('${carId}')">+ Add Record</button>
-      <div id="add-maintenance-form-${carId}" class="add-mod-form" style="display:none">
-        <input id="maintenance-name-${carId}" class="add-mod-field" placeholder="Service name *" autocomplete="off">
-        <div class="add-mod-row-2">
-          <select id="maintenance-cat-${carId}" class="add-mod-field">
-            <option value="">Category</option>
-            ${catOptions}
-          </select>
-          <div class="add-mod-labeled-field">
-            <label class="add-mod-label">Service date</label>
-            <input type="date" id="maintenance-date-${carId}" class="add-mod-field" style="margin:0">
-          </div>
-        </div>
-        <div class="add-mod-row-2">
-          <input type="number" id="maintenance-mileage-${carId}" class="add-mod-field" placeholder="Mileage">
-          <input type="number" id="maintenance-cost-${carId}" class="add-mod-field" placeholder="Cost ($)">
-        </div>
-        <textarea id="maintenance-notes-${carId}" class="add-mod-field" placeholder="Notes" rows="2"></textarea>
-        <div class="add-mod-actions">
-          <button class="btn-primary" style="font-size:13px;padding:8px 18px" onclick="submitAddMaintenance('${carId}')">Save Record</button>
-          <button class="btn-nav" style="font-size:13px;padding:8px 18px" onclick="toggleAddMaintenance('${carId}')">Cancel</button>
-        </div>
-      </div>
-    </div>
-  `;
+async function removeCarMod(modId, carId) {
+  const res = await fetch('/api/v1/garage/cars/mods/remove?mod_id=' + modId, {method: 'DELETE'});
+  if (!res.ok) return;
+  refreshCarModal(carId);
 }
 
 function toggleAddMaintenance(carId) {
@@ -906,55 +739,16 @@ async function submitAddMaintenance(carId) {
     body: JSON.stringify({name, category: category || 'Other', service_date, mileage, cost, notes}),
   });
   if (!res.ok) return;
-  const record = await res.json();
-  currentModalCar = Object.assign({}, currentModalCar, {maintenance: [...(currentModalCar.maintenance || []), record]});
-  renderCarModal(currentModalCar);
+  refreshCarModal(carId);
 }
 
 async function removeCarMaintenance(recordId, carId) {
   const res = await fetch('/api/v1/garage/cars/maintenance/remove?record_id=' + recordId, {method: 'DELETE'});
   if (!res.ok) return;
-  currentModalCar = Object.assign({}, currentModalCar, {maintenance: (currentModalCar.maintenance || []).filter(m => m.id !== recordId)});
-  renderCarModal(currentModalCar);
+  refreshCarModal(carId);
 }
 
-function toggleAddMod(carId) {
-  const form = document.getElementById('add-mod-form-' + carId);
-  if (!form) return;
-  const open = form.style.display !== 'none';
-  form.style.display = open ? 'none' : 'block';
-  if (!open) setTimeout(() => document.getElementById('mod-name-' + carId)?.focus(), 50);
-}
-
-async function submitAddMod(carId) {
-  const nameEl = document.getElementById('mod-name-' + carId);
-  const name = nameEl?.value.trim();
-  if (!name) { nameEl?.focus(); return; }
-  const category = document.getElementById('mod-cat-' + carId)?.value || 'Other';
-  const install_date = document.getElementById('mod-date-' + carId)?.value || '';
-  const mileage_at_install = parseInt(document.getElementById('mod-mileage-' + carId)?.value) || 0;
-  const cost = parseInt(document.getElementById('mod-cost-' + carId)?.value) || 0;
-  const notes = document.getElementById('mod-notes-' + carId)?.value.trim() || '';
-
-  const res = await fetch('/api/v1/garage/cars/mods/add?car_id=' + carId, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name, category: category || 'Other', install_date, mileage_at_install, cost, notes}),
-  });
-  if (!res.ok) return;
-  const mod = await res.json();
-  currentModalCar = Object.assign({}, currentModalCar, {mods: [...(currentModalCar.mods || []), mod]});
-  renderCarModal(currentModalCar);
-}
-
-async function removeCarMod(modId, carId) {
-  const res = await fetch('/api/v1/garage/cars/mods/remove?mod_id=' + modId, {method: 'DELETE'});
-  if (!res.ok) return;
-  currentModalCar = Object.assign({}, currentModalCar, {mods: (currentModalCar.mods || []).filter(m => m.id !== modId)});
-  renderCarModal(currentModalCar);
-}
-
-// --- Mod uploads ---
+// ── Mod / maintenance doc uploads ─────────────────────────────
 
 let modUploadCtx = null;
 
@@ -1047,66 +841,30 @@ async function submitModUpload() {
     if (!saveRes.ok) throw new Error('Failed to save document');
 
     closeModUploadModal();
-    if (type === 'maintenance') {
-      currentModalCar = Object.assign({}, currentModalCar, {
-        maintenance: (currentModalCar.maintenance || []).map(m =>
-          m.id === recordId ? Object.assign({}, m, {upload_count: (m.upload_count || 0) + 1}) : m
-        ),
-      });
-    } else {
-      currentModalCar = Object.assign({}, currentModalCar, {
-        mods: (currentModalCar.mods || []).map(m =>
-          m.id === recordId ? Object.assign({}, m, {upload_count: (m.upload_count || 0) + 1}) : m
-        ),
-      });
-    }
-    renderCarModal(currentModalCar);
+    refreshCarModal(activeCarId);
   } catch (err) {
     statusEl.textContent = err.message || 'Upload failed';
     btn.disabled = false;
   }
 }
 
-async function openCarDocViewer(type, recordId, recordName) {
-  document.getElementById('mod-uploads-viewer-title').textContent = escHtml(recordName) + ' — Documents';
+function openCarDocViewer(type, recordId, recordName) {
+  const viewer = document.getElementById('mod-uploads-viewer');
+  document.getElementById('mod-uploads-viewer-title').textContent = recordName + ' — Documents';
   document.getElementById('mod-uploads-viewer-list').innerHTML = '<div class="mod-empty">Loading…</div>';
-  document.getElementById('mod-uploads-viewer').style.display = 'flex';
-  document.getElementById('mod-uploads-viewer').dataset.type = type;
-  document.getElementById('mod-uploads-viewer').dataset.recordId = recordId;
+  viewer.style.display = 'flex';
+  viewer.dataset.type = type;
+  viewer.dataset.recordId = recordId;
+  refreshCarDocViewer(type, recordId);
+}
 
-  const url = type === 'maintenance'
-    ? '/api/v1/garage/cars/maintenance/uploads?maintenance_id=' + recordId
-    : '/api/v1/garage/cars/mods/uploads?mod_id=' + recordId;
-  try {
-    const res = await fetch(url);
-    const uploads = res.ok ? await res.json() : [];
-    renderCarDocViewer(type, recordId, uploads);
-  } catch {
-    document.getElementById('mod-uploads-viewer-list').innerHTML = '<div class="mod-empty">Failed to load documents.</div>';
-  }
+function refreshCarDocViewer(type, recordId) {
+  fetch('/fragments/car-docs?type=' + type + '&record_id=' + recordId)
+    .then(r => r.ok ? r.text() : '<div class="mod-empty">Failed to load documents.</div>')
+    .then(html => { document.getElementById('mod-uploads-viewer-list').innerHTML = html; });
 }
 
 function openModUploadsViewer(modId, modName) { openCarDocViewer('mod', modId, modName); }
-
-function renderCarDocViewer(type, recordId, uploads) {
-  const listEl = document.getElementById('mod-uploads-viewer-list');
-  if (!uploads || uploads.length === 0) {
-    listEl.innerHTML = '<div class="mod-empty">No documents yet.</div>';
-    return;
-  }
-  listEl.innerHTML = uploads.map(u => `
-    <div class="mod-upload-viewer-row">
-      <div class="mod-upload-viewer-info">
-        <span class="mod-upload-viewer-name">${escHtml(u.name)}</span>
-        <span class="mod-upload-viewer-type">${escHtml(u.upload_type)}</span>
-      </div>
-      <div class="mod-upload-viewer-actions">
-        <a href="${escHtml(u.url)}" target="_blank" rel="noopener" class="btn-nav mod-upload-view-btn">View</a>
-        ${isOwner ? `<button class="mod-remove-btn" onclick="deleteCarDoc('${escHtml(u.id)}','${type}','${escHtml(recordId)}')">✕</button>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
 
 function closeModUploadsViewer() {
   document.getElementById('mod-uploads-viewer').style.display = 'none';
@@ -1118,37 +876,20 @@ async function deleteCarDoc(uploadId, type, recordId) {
     : '/api/v1/garage/cars/mods/uploads/remove?upload_id=' + uploadId;
   const res = await fetch(removeURL, {method: 'DELETE'});
   if (!res.ok) return;
-  if (type === 'maintenance') {
-    currentModalCar = Object.assign({}, currentModalCar, {
-      maintenance: (currentModalCar.maintenance || []).map(m =>
-        m.id === recordId ? Object.assign({}, m, {upload_count: Math.max(0, (m.upload_count || 0) - 1)}) : m
-      ),
-    });
-  } else {
-    currentModalCar = Object.assign({}, currentModalCar, {
-      mods: (currentModalCar.mods || []).map(m =>
-        m.id === recordId ? Object.assign({}, m, {upload_count: Math.max(0, (m.upload_count || 0) - 1)}) : m
-      ),
-    });
-  }
-  renderCarModal(currentModalCar);
-  const viewerModal = document.getElementById('mod-uploads-viewer');
-  if (viewerModal.style.display !== 'none') {
-    const url = type === 'maintenance'
-      ? '/api/v1/garage/cars/maintenance/uploads?maintenance_id=' + recordId
-      : '/api/v1/garage/cars/mods/uploads?mod_id=' + recordId;
-    const res2 = await fetch(url);
-    const uploads = res2.ok ? await res2.json() : [];
-    renderCarDocViewer(type, recordId, uploads);
+  refreshCarModal(activeCarId);
+  const viewer = document.getElementById('mod-uploads-viewer');
+  if (viewer.style.display !== 'none') {
+    refreshCarDocViewer(viewer.dataset.type, viewer.dataset.recordId);
   }
 }
 
+// ── Car photo callbacks ───────────────────────────────────────
+
 async function confirmCarPhoto(objectKey) {
-  const isPrimary = uploadCtx.isPrimary;
   const res = await fetch(`/api/v1/garage/cars/photos/add?car_id=${uploadCtx.carId}`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({object_key: objectKey, is_primary: isPrimary}),
+    body: JSON.stringify({object_key: objectKey, is_primary: uploadCtx.isPrimary}),
   });
   if (!res.ok) throw new Error('Failed to save photo');
   return res.json();
@@ -1163,6 +904,57 @@ async function confirmCarCover(objectKey) {
   if (!res.ok) throw new Error('Failed to save cover photo');
   return res.json();
 }
+
+function openCarCoverUpload(el) {
+  const carId = el.dataset.carId;
+  const hasCover = el.dataset.hasCover === 'true';
+  openUploadModal({
+    entityType: 'car',
+    carId,
+    isPrimary: true,
+    title: hasCover ? 'Replace Cover Photo' : 'Add Cover Photo',
+    confirm: confirmCarCover,
+    onSuccess: () => syncCarCardThumb(carId),
+  });
+}
+
+function openAddPhotoModal(el) {
+  const carId = el.dataset.carId;
+  openUploadModal({
+    entityType: 'car',
+    carId,
+    isPrimary: false,
+    title: 'Add Photo',
+    maxPhotos: parseInt(el.dataset.maxPhotos),
+    currentCount: parseInt(el.dataset.photoCount),
+    confirm: confirmCarPhoto,
+    onSuccess: () => syncCarCardThumb(carId),
+  });
+}
+
+function syncCarCardThumb(carId) {
+  fetch('/api/v1/garage/cars/photos?car_id=' + carId)
+    .then(r => r.ok ? r.json() : [])
+    .then(photos => {
+      const primary = photos.find(p => p.is_primary);
+      const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
+      if (wrap) {
+        const url = primary ? primary.url : '';
+        wrap.dataset.primaryPhotoUrl = url;
+        const thumb = wrap.querySelector('.car-card-thumb');
+        if (thumb) thumb.innerHTML = url ? `<img src="${url}" style="width:100%;height:100%;object-fit:cover">` : '<div class="car-card-icon">🚗</div>';
+      }
+      if (activeCarId === carId) refreshCarModal(carId);
+    });
+}
+
+async function deleteCarPhoto(photoId, carId) {
+  const res = await fetch(`/api/v1/garage/cars/photos/remove?photo_id=${photoId}`, {method: 'POST'});
+  if (!res.ok) return;
+  syncCarCardThumb(carId);
+}
+
+// ── Profile cover / avatar ────────────────────────────────────
 
 function openProfileCoverUpload() {
   let resolvedURL = '';
@@ -1255,66 +1047,10 @@ async function removeAvatarPhoto() {
   if (removeBtn) removeBtn.style.display = 'none';
 }
 
-function updateCarCover(carId, objectKey) {
-  fetch('/api/v1/garage/cars/photos?car_id=' + carId)
-    .then(r => r.ok ? r.json() : [])
-    .then(photos => {
-      const primary = photos.find(p => p.is_primary);
-      const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
-      if (wrap) {
-        const url = primary ? primary.url : '';
-        wrap.dataset.primaryPhotoUrl = url;
-        const thumb = wrap.querySelector('.car-card-thumb');
-        if (thumb) {
-          thumb.innerHTML = url ? `<img src="${url}" style="width:100%;height:100%;object-fit:cover">` : '';
-        }
-      }
-      if (currentModalCar && currentModalCar.id === carId) {
-        currentModalCar = Object.assign({}, currentModalCar, {primaryURL: primary ? primary.url : '', photos});
-        renderCarModal(currentModalCar);
-      }
-    });
-}
+// ── Utilities ─────────────────────────────────────────────────
 
-async function deleteCarPhoto(photoId, carId) {
-  const res = await fetch(`/api/v1/garage/cars/photos/remove?photo_id=${photoId}`, {method: 'POST'});
-  if (!res.ok) return;
-  fetch('/api/v1/garage/cars/photos?car_id=' + carId)
-    .then(r => r.ok ? r.json() : [])
-    .then(photos => {
-      const primary = photos.find(p => p.is_primary);
-      const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
-      if (wrap) {
-        const url = primary ? primary.url : '';
-        wrap.dataset.primaryPhotoUrl = url;
-        const thumb = wrap.querySelector('.car-card-thumb');
-        if (thumb) {
-          thumb.innerHTML = url ? `<img src="${url}" style="width:100%;height:100%;object-fit:cover">` : '';
-        }
-      }
-      if (currentModalCar && currentModalCar.id === carId) {
-        currentModalCar = Object.assign({}, currentModalCar, {primaryURL: primary ? primary.url : '', photos});
-        renderCarModal(currentModalCar);
-      }
-    });
-}
-
-function onCarPhotoAdded(carId, objectKey) {
-  fetch('/api/v1/garage/cars/photos?car_id=' + carId)
-    .then(r => r.ok ? r.json() : [])
-    .then(photos => {
-      const primary = photos.find(p => p.is_primary);
-      const wrap = document.querySelector(`.car-card-wrap[data-id="${carId}"]`);
-      if (wrap && primary) {
-        wrap.dataset.primaryPhotoUrl = primary.url;
-        const thumb = wrap.querySelector('.car-card-thumb');
-        if (thumb) thumb.innerHTML = `<img src="${primary.url}" style="width:100%;height:100%;object-fit:cover">`;
-      }
-      if (currentModalCar && currentModalCar.id === carId) {
-        currentModalCar = Object.assign({}, currentModalCar, {primaryURL: primary ? primary.url : '', photos});
-        renderCarModal(currentModalCar);
-      }
-    });
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 (function() {

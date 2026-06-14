@@ -49,11 +49,12 @@ type HeroData struct {
 }
 
 type HeroBuild struct {
-	CarName       string
-	CoverPhotoURL template.URL
-	Photos        []template.URL
-	ExtraPhotos   int
-	ShareURL      string
+	CarName          string
+	CoverPhotoURL    template.URL
+	Photos           []template.URL
+	ShareURL         string
+	ModCount         int
+	MaintenanceCount int
 }
 
 type HeroGarage struct {
@@ -173,9 +174,24 @@ func (l *LandingClient) fetchBuild(ctx context.Context, carID string) (*HeroBuil
 		}
 		build.Photos = append(build.Photos, template.URL(l.store.CarPhotoURL(p.ObjectKey)))
 	}
-	if len(photos) > 3 {
-		build.ExtraPhotos = len(photos) - 3
+
+	var modCount struct {
+		Count int `db:"count"`
 	}
+	_ = l.db.QueryRow(ctx,
+		`SELECT COUNT(*)::int AS count FROM car_mods WHERE car_id = $1`,
+		db.WithResultOf(&modCount), carID,
+	)
+	build.ModCount = modCount.Count
+
+	var maintCount struct {
+		Count int `db:"count"`
+	}
+	_ = l.db.QueryRow(ctx,
+		`SELECT COUNT(*)::int AS count FROM car_maintenance WHERE car_id = $1`,
+		db.WithResultOf(&maintCount), carID,
+	)
+	build.MaintenanceCount = maintCount.Count
 
 	return build, nil
 }

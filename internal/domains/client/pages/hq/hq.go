@@ -23,6 +23,10 @@ var hqTemplate = template.Must(
 		ParseFS(templates, "templates/hq.html"),
 )
 
+var hqMemberCardTemplate = template.Must(
+	template.New("").ParseFS(templates, "templates/hq-member-card-fragment.html"),
+)
+
 type HQClient struct {
 	db       db.DB
 	storage  *storage.Client
@@ -173,6 +177,30 @@ func (h *HQClient) getMembers(ctx context.Context, clubAccountID string) ([]mode
 		}
 	}
 	return members, err
+}
+
+func (h *HQClient) getMemberByUsername(ctx context.Context, username string) (models.HQMember, error) {
+	var member models.HQMember
+	err := h.db.QueryRow(ctx,
+		`SELECT a.username,
+		        COALESCE(ap.banner_key, '') AS cover_photo_key,
+		        COALESCE(ap.avatar_key, '') AS avatar_key
+		 FROM accounts a
+		 LEFT JOIN account_photos ap ON ap.account_id = a.id
+		 WHERE a.username = $1`,
+		db.WithResultOf(&member),
+		username,
+	)
+	if err != nil {
+		return models.HQMember{}, err
+	}
+	if member.CoverPhotoKey != "" {
+		member.CoverPhotoURL = h.storage.AccountPhotoURL(member.CoverPhotoKey)
+	}
+	if member.AvatarKey != "" {
+		member.AvatarURL = h.storage.AccountPhotoURL(member.AvatarKey)
+	}
+	return member, nil
 }
 
 func (h *HQClient) searchNonMembers(ctx context.Context, clubAccountID, q string) ([]models.HQMember, error) {

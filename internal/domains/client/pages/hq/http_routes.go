@@ -3,6 +3,7 @@ package hq
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"strings"
@@ -141,8 +142,42 @@ func (h *HQClient) SearchMembers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 	for _, m := range results {
-		fmt.Fprintf(w, `<a class="search-result-item" href="#">@%s<span class="search-result-badge">Garage</span></a>`,
-			m.Username)
+		safe := html.EscapeString(m.Username)
+		fmt.Fprintf(w, `<button type="button" class="add-member-result-item" onclick="addMemberDirect('%s')"><span>@%s</span><span class="search-result-badge">Garage</span></button>`,
+			safe, safe)
+	}
+}
+
+func (h *HQClient) MemberCardFragment(w http.ResponseWriter, r *http.Request) {
+	username := strings.TrimPrefix(r.URL.Query().Get("username"), "@")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	member, err := h.getMemberByUsername(r.Context(), username)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	sessionContainer, _ := h.sessions.GetOptionalSession(r, w)
+	isOwner := false
+	if sessionContainer != nil {
+		payload := sessionContainer.GetAccessTokenPayload()
+		acctType, _ := payload["acct_type"].(string)
+		isOwner = acctType == "club"
+	}
+
+	data := struct {
+		Member  models.HQMember
+		IsOwner bool
+	}{Member: member, IsOwner: isOwner}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := hqMemberCardTemplate.ExecuteTemplate(w, "hq-member-card-fragment.html", data); err != nil {
+		log.Printf("MemberCardFragment: render: %s", err)
 	}
 }
 

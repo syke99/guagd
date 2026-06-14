@@ -53,13 +53,14 @@
             </div>
             <div class="card-body">
               <div class="build-card-header">
-                <div>
+                <div style="min-width:0;flex:1">
                   <div class="build-car-name">{{.Build.CarName}}</div>
                 </div>
-              </div>
-              <div class="build-url">
-                <span>{{.Build.ShareURL}}</span>
-                <button class="copy-btn" onclick="copyHeroLink(this,'{{.Build.ShareURL}}')">Copy</button>
+                <div class="build-stats">
+                  <div class="stat"><div class="stat-val">{{.Build.ModCount}}</div><div class="stat-label">Mods</div></div>
+                  <div class="stat"><div class="stat-val">{{.Build.MaintenanceCount}}</div><div class="stat-label">Maintenance</div></div>
+                  <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
+                </div>
               </div>
             </div>
             <div class="photo-strip">
@@ -68,9 +69,10 @@
                 <img src="{{.}}" alt="" class="photo-thumb-img">
               </div>
               {{end}}
-              {{if .Build.ExtraPhotos}}
-              <div class="photo-thumb-more">+{{.Build.ExtraPhotos}}<small>photos</small></div>
-              {{end}}
+              <div class="photo-thumb-add" style="pointer-events:none">+</div>
+            </div>
+            <div class="build-url" style="margin:12px 0 0">
+              <button class="copy-btn" onclick="copyHeroLink(this,'{{.Build.ShareURL}}')">Share</button>
             </div>
           </div>
           {{else}}
@@ -83,37 +85,65 @@
             </div>
             <div class="card-body">
               <div class="build-card-header">
-                <div>
+                <div style="min-width:0;flex:1">
                   <div class="build-car-name">2019 Subaru WRX STI</div>
                   <div class="build-car-sub">Stage 2 Street Build</div>
                 </div>
                 <div class="build-stats">
                   <div class="stat"><div class="stat-val">9</div><div class="stat-label">Mods</div></div>
+                  <div class="stat"><div class="stat-val">4</div><div class="stat-label">Maintenance</div></div>
                   <div class="stat"><div class="stat-val">4</div><div class="stat-label">Verified</div></div>
                 </div>
               </div>
-              <div class="mod-row">
-                <div><div class="mod-name">Cobb Accessport V3</div><div class="mod-meta">Installed at 38,210 mi · Jun 2023</div></div>
-                <span class="badge-verified">✓ Verified</span>
-              </div>
-              <div class="mod-row">
-                <div><div class="mod-name">ETS Front Mount Intercooler</div><div class="mod-meta">Installed at 41,880 mi · Oct 2023</div></div>
-                <span class="badge-verified">✓ Verified</span>
-              </div>
-              <div class="mod-row">
-                <div><div class="mod-name">KW V3 Coilovers</div><div class="mod-meta">Installed at 35,000 mi · Jan 2023</div></div>
-                <span class="badge-owner">Owner reported</span>
-              </div>
-              <div class="build-url">
-                <span>gaugd.com/builds/wrx-sti-john</span>
-                <button class="copy-btn">Copy</button>
+              <div class="build-tabs-container">
+                <div class="build-tab-bar">
+                  <button class="build-tab active">Mods</button>
+                  <button class="build-tab">Maintenance</button>
+                </div>
+                <div class="build-tab-content" style="height:auto;overflow:visible">
+                  <div class="mod-list-section">
+                    <div class="mod-row">
+                      <div style="flex:1;min-width:0">
+                        <div class="mod-entry-top">
+                          <span class="mod-category-badge">Tuning</span>
+                          <span class="mod-name">Cobb Accessport V3</span>
+                          <span class="trust-badge trust-badge--documented">Documented</span>
+                        </div>
+                        <div class="mod-meta">38,210 mi · Jun 2023</div>
+                      </div>
+                    </div>
+                    <div class="mod-row">
+                      <div style="flex:1;min-width:0">
+                        <div class="mod-entry-top">
+                          <span class="mod-category-badge">Intake</span>
+                          <span class="mod-name">ETS Front Mount Intercooler</span>
+                          <span class="trust-badge trust-badge--documented">Documented</span>
+                        </div>
+                        <div class="mod-meta">41,880 mi · Oct 2023</div>
+                      </div>
+                    </div>
+                    <div class="mod-row">
+                      <div style="flex:1;min-width:0">
+                        <div class="mod-entry-top">
+                          <span class="mod-category-badge">Suspension</span>
+                          <span class="mod-name">KW V3 Coilovers</span>
+                          <span class="trust-badge trust-badge--reported">Owner reported</span>
+                        </div>
+                        <div class="mod-meta">35,000 mi · Jan 2023</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="photo-strip">
               <div class="photo-thumb"></div>
               <div class="photo-thumb"></div>
               <div class="photo-thumb"></div>
-              <div class="photo-thumb-more">+9<small>photos</small></div>
+              <div class="photo-thumb-add" style="pointer-events:none">+</div>
+            </div>
+            <div class="build-url" style="margin:12px 0 0">
+              <button class="copy-btn">Share</button>
             </div>
           </div>
           {{end}}

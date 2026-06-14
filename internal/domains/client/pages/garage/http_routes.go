@@ -376,6 +376,121 @@ func (g *GarageClient) RemoveCoverPhoto(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (g *GarageClient) CarModalFragment(w http.ResponseWriter, r *http.Request) {
+	carID := r.URL.Query().Get("car_id")
+	if carID == "" {
+		http.Error(w, "car_id required", http.StatusBadRequest)
+		return
+	}
+
+	car, ownerSupertokensID, err := g.getCarForModal(r.Context(), carID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	sessionContainer, _ := g.sessions.GetOptionalSession(r, w)
+	isOwner := sessionContainer != nil && sessionContainer.GetUserID() == ownerSupertokensID
+
+	type result[T any] struct {
+		val T
+		err error
+	}
+	photoCh := make(chan result[[]models.CarPhoto], 1)
+	modCh := make(chan result[[]models.Mod], 1)
+	maintCh := make(chan result[[]models.Maintenance], 1)
+
+	go func() {
+		v, e := g.getCarPhotos(r.Context(), carID)
+		photoCh <- result[[]models.CarPhoto]{v, e}
+	}()
+	go func() {
+		v, e := g.getMods(r.Context(), carID)
+		if v == nil {
+			v = []models.Mod{}
+		}
+		modCh <- result[[]models.Mod]{v, e}
+	}()
+	go func() {
+		v, e := g.getMaintenance(r.Context(), carID)
+		if v == nil {
+			v = []models.Maintenance{}
+		}
+		maintCh <- result[[]models.Maintenance]{v, e}
+	}()
+
+	photos := (<-photoCh).val
+	mods := (<-modCh).val
+	maintenance := (<-maintCh).val
+
+	var primary *models.CarPhoto
+	var nonPrimary []models.CarPhoto
+	for i := range photos {
+		if photos[i].IsPrimary {
+			primary = &photos[i]
+		} else {
+			nonPrimary = append(nonPrimary, photos[i])
+		}
+	}
+	data := models.CarModalData{
+		Car:             car,
+		PrimaryPhoto:    primary,
+		Photos:          nonPrimary,
+		TotalPhotoCount: len(photos),
+		Mods:            mods,
+		Maintenance:     maintenance,
+		IsOwner:         isOwner,
+		MaxPhotos:       10,
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := carModalTemplate.ExecuteTemplate(w, "car-modal-card.html", data); err != nil {
+		log.Printf("carModalFragment: render: %s", err)
+	}
+}
+
+func (g *GarageClient) CarDocsFragment(w http.ResponseWriter, r *http.Request) {
+	recordType := r.URL.Query().Get("type")
+	recordID := r.URL.Query().Get("record_id")
+	if (recordType != "mod" && recordType != "maintenance") || recordID == "" {
+		http.Error(w, "type and record_id required", http.StatusBadRequest)
+		return
+	}
+
+	ownerSupertokensID, err := g.getOwnerForRecord(r.Context(), recordType, recordID)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	sessionContainer, _ := g.sessions.GetOptionalSession(r, w)
+	isOwner := sessionContainer != nil && sessionContainer.GetUserID() == ownerSupertokensID
+
+	var uploads []models.CarUpload
+	if recordType == "maintenance" {
+		uploads, err = g.getMaintenanceUploads(r.Context(), recordID)
+	} else {
+		uploads, err = g.getCarUploads(r.Context(), recordID)
+	}
+	if err != nil {
+		log.Printf("CarDocsFragment: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := carDocsTemplate.ExecuteTemplate(w, "car-docs-fragment.html", models.CarDocsData{
+		Uploads:  uploads,
+		IsOwner:  isOwner,
+		Type:     recordType,
+		RecordID: recordID,
+	}); err != nil {
+		log.Printf("CarDocsFragment: render: %s", err)
+	}
+}
+
 func (g *GarageClient) GetCarMods(w http.ResponseWriter, r *http.Request) {
 	carID := r.URL.Query().Get("car_id")
 	if carID == "" {

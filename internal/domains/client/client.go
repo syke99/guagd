@@ -126,6 +126,8 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 			}
 			c.garage.GaragePage(w, r)
 		},
+		"/fragments/car":                              c.garage.CarModalFragment,
+		"/fragments/car-docs":                         c.garage.CarDocsFragment,
 		"/api/v1/garage/layout":                      middleware.RequireAuth(c.garage.SaveLayout),
 		"/api/v1/garage/theme":                        middleware.RequireAuth(c.garage.SaveTheme),
 		"/api/v1/garage/cover":                        middleware.RequireAuth(c.garage.SaveCoverPhoto),
@@ -155,6 +157,7 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 		"/api/v1/hq/theme":                            middleware.RequireAuth(c.hq.SaveTheme),
 		"/api/v1/hq/cover":                            middleware.RequireAuth(c.hq.SaveCoverPhoto),
 		"DELETE /api/v1/hq/cover":                     middleware.RequireAuth(c.hq.RemoveCoverPhoto),
+		"/fragments/hq-member-card":                   c.hq.MemberCardFragment,
 		"/api/v1/hq/members":                          c.hq.ListMembers,
 		"/api/v1/hq/members/add":                      c.hq.AddMember,
 		"/api/v1/hq/members/remove":                   c.hq.RemoveMember,

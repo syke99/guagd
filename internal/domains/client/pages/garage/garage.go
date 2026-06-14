@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,6 +27,155 @@ var garageTemplate = template.Must(
 	template.Must(template.New("").Parse(shared.NavTemplate)).
 		ParseFS(templates, "templates/garage.html"),
 )
+
+var carModalTemplate = template.Must(
+	template.New("").Funcs(carModalFuncMap).ParseFS(templates, "templates/car-modal-card.html"),
+)
+
+var carDocsTemplate = template.Must(
+	template.New("").ParseFS(templates, "templates/car-docs-fragment.html"),
+)
+
+var carModalFuncMap = template.FuncMap{
+	"shortID": func(id string) string {
+		if len(id) < 8 {
+			return id
+		}
+		return id[:8]
+	},
+	"trustLevel": func(count int) string {
+		if count > 0 {
+			return "documented"
+		}
+		return "reported"
+	},
+	"trustLabel": func(count int) string {
+		if count > 0 {
+			return "Documented"
+		}
+		return "Reported"
+	},
+	"formatModMeta": func(m models.Mod) string {
+		var parts []string
+		if m.InstallDate != "" {
+			if s := fmtDateStr(m.InstallDate); s != "" {
+				parts = append(parts, s)
+			}
+		}
+		if m.MileageAtInstall != 0 {
+			parts = append(parts, fmtMileage(m.MileageAtInstall))
+		}
+		if m.Cost != 0 {
+			parts = append(parts, fmtCost(m.Cost))
+		}
+		return strings.Join(parts, " · ")
+	},
+	"formatMaintMeta": func(m models.Maintenance) string {
+		var parts []string
+		if m.ServiceDate != "" {
+			if s := fmtDateStr(m.ServiceDate); s != "" {
+				parts = append(parts, s)
+			}
+		}
+		if m.Mileage != 0 {
+			parts = append(parts, fmtMileage(m.Mileage))
+		}
+		if m.Cost != 0 {
+			parts = append(parts, fmtCost(m.Cost))
+		}
+		return strings.Join(parts, " · ")
+	},
+}
+
+func fmtDateStr(s string) string {
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return s
+	}
+	return t.Format("Jan 2006")
+}
+
+func fmtMileage(n int) string {
+	return fmtNumber(n) + " mi"
+}
+
+func fmtCost(n int) string {
+	return "$" + fmtNumber(n)
+}
+
+func fmtNumber(n int) string {
+	s := strconv.Itoa(n)
+	var b []byte
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			b = append(b, ',')
+		}
+		b = append(b, byte(c))
+	}
+	return string(b)
+}
+
+type carForModal struct {
+	ID                 string `db:"id"`
+	Year               int    `db:"year"`
+	Make               string `db:"make"`
+	Model              string `db:"model"`
+	Trim               string `db:"trim"`
+	Mileage            int    `db:"mileage"`
+	OwnerSupertokensID string `db:"owner_supertokens_id"`
+}
+
+func (g *GarageClient) getCarForModal(ctx context.Context, carID string) (models.Car, string, error) {
+	var row carForModal
+	err := g.db.QueryRow(ctx,
+		`SELECT c.id::text,
+		        c.year,
+		        c.make,
+		        c.model,
+		        COALESCE(c.trim, '')    AS trim,
+		        COALESCE(c.mileage, 0) AS mileage,
+		        a.supertokens_id        AS owner_supertokens_id
+		 FROM cars c
+		 JOIN accounts a ON a.id = c.owner_id
+		 WHERE c.id = $1`,
+		db.WithResultOf(&row),
+		carID,
+	)
+	if err != nil {
+		return models.Car{}, "", err
+	}
+	return models.Car{
+		ID:      row.ID,
+		Year:    row.Year,
+		Make:    row.Make,
+		Model:   row.Model,
+		Trim:    row.Trim,
+		Mileage: row.Mileage,
+	}, row.OwnerSupertokensID, nil
+}
+
+func (g *GarageClient) getOwnerForRecord(ctx context.Context, recordType, recordID string) (string, error) {
+	var ownerSupertokensID string
+	query := `SELECT a.supertokens_id
+	          FROM car_mods cm
+	          JOIN cars c ON c.id = cm.car_id
+	          JOIN accounts a ON a.id = c.owner_id
+	          WHERE cm.id = $1`
+	if recordType == "maintenance" {
+		query = `SELECT a.supertokens_id
+		         FROM car_maintenance cm
+		         JOIN cars c ON c.id = cm.car_id
+		         JOIN accounts a ON a.id = c.owner_id
+		         WHERE cm.id = $1`
+	}
+	err := g.db.QueryRow(ctx, query, func(rows pgx.Rows) error {
+		if !rows.Next() {
+			return pgx.ErrNoRows
+		}
+		return rows.Scan(&ownerSupertokensID)
+	}, recordID)
+	return ownerSupertokensID, err
+}
 
 type GarageClient struct {
 	db       db.DB

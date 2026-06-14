@@ -1,0 +1,18 @@
+{{define "car-docs-fragment.html"}}
+{{if not .Uploads}}
+<div class="mod-empty">No documents yet.</div>
+{{else}}
+{{range .Uploads}}
+<div class="mod-upload-viewer-row">
+  <div class="mod-upload-viewer-info">
+    <span class="mod-upload-viewer-name">{{.Name}}</span>
+    <span class="mod-upload-viewer-type">{{.UploadType}}</span>
+  </div>
+  <div class="mod-upload-viewer-actions">
+    <a href="{{.URL}}" target="_blank" rel="noopener" class="btn-nav mod-upload-view-btn">View</a>
+    {{if $.IsOwner}}<button class="mod-remove-btn" onclick="deleteCarDoc('{{.ID}}','{{$.Type}}','{{$.RecordID}}')">✕</button>{{end}}
+  </div>
+</div>
+{{end}}
+{{end}}
+{{end}}

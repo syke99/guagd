@@ -2303,6 +2303,25 @@ footer span { font-size: 13px; color: var(--muted); }
 }
 .photo-thumb-add:hover { border-color: var(--accent); color: var(--accent); }
 
+.photo-strip-nav {
+  flex: 0 0 22px;
+  height: 60px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.photo-strip-nav:disabled { opacity: 0.3; cursor: default; }
+.photo-strip-nav:not(:disabled):hover { color: var(--accent); border-color: var(--accent); }
+
 /* HQ PAGE */
 .hq-wrap {
   padding: 24px 40px;

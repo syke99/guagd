@@ -1,0 +1,221 @@
+{{define "car-modal-card.html"}}
+<div class="card-cover"
+     {{if .IsOwner}}data-car-id="{{.Car.ID}}" data-has-cover="{{if .PrimaryPhoto}}true{{else}}false{{end}}" onclick="openCarCoverUpload(this)" style="cursor:pointer"{{end}}>
+  {{if .PrimaryPhoto}}
+  <img src="{{.PrimaryPhoto.URL}}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:1">
+  {{else if .IsOwner}}
+  <div class="card-cover-inner"><div class="card-cover-icon">📷</div><div class="card-cover-label">Add Cover Photo</div></div>
+  {{else}}
+  <div class="card-cover-inner"><div class="card-cover-icon">📷</div><div class="card-cover-label">Cover Photo</div></div>
+  {{end}}
+  {{if and .IsOwner .PrimaryPhoto}}
+  <button class="cover-delete-btn" onclick="event.stopPropagation();deleteCarPhoto('{{.PrimaryPhoto.ID}}','{{.Car.ID}}')">✕</button>
+  {{end}}
+</div>
+<div class="card-body">
+  <div class="build-card-header">
+    <div style="min-width:0;flex:1">
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="build-car-name">{{.Car.Year}} {{.Car.Make}} {{.Car.Model}}</div>
+        {{if .IsOwner}}<button class="car-edit-btn" onclick="openCarEditModal('{{.Car.ID}}')" title="Edit car info">✏</button>{{end}}
+      </div>
+      <div class="build-car-sub">{{if .Car.Trim}}{{.Car.Trim}}{{else}}Build Details{{end}}</div>
+    </div>
+    <div class="build-stats">
+      <div class="stat"><div class="stat-val">{{len .Mods}}</div><div class="stat-label">Mods</div></div>
+      <div class="stat"><div class="stat-val">{{len .Maintenance}}</div><div class="stat-label">Maintenance</div></div>
+      <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
+    </div>
+  </div>
+  <div class="build-tabs-container">
+    <div class="build-tab-bar">
+      <button class="build-tab active" onclick="switchBuildTab('{{.Car.ID}}','mods',this)">Mods</button>
+      <button class="build-tab" onclick="switchBuildTab('{{.Car.ID}}','maintenance',this)">Maintenance</button>
+    </div>
+    <div class="build-tab-content">
+      <div id="build-tab-mods-{{.Car.ID}}" class="build-tab-panel">
+        {{template "mod-rows" .}}
+      </div>
+      <div id="build-tab-maintenance-{{.Car.ID}}" class="build-tab-panel" style="display:none">
+        {{template "maintenance-rows" .}}
+      </div>
+    </div>
+    {{if .IsOwner}}
+    <div id="build-tab-actions-mods-{{.Car.ID}}">{{template "mod-add-form" .}}</div>
+    <div id="build-tab-actions-maintenance-{{.Car.ID}}" style="display:none">{{template "maintenance-add-form" .}}</div>
+    {{end}}
+  </div>
+</div>
+{{template "photo-strip" .}}
+<div class="build-url" style="margin:12px 0 0">
+  <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'{{shortID .Car.ID}}')">Share</button>
+</div>
+{{end}}
+
+{{define "mod-rows"}}
+<div class="mod-list-section">
+  {{if not .Mods}}
+  <div class="mod-empty">No mods documented yet.</div>
+  {{else}}
+  {{range .Mods}}
+  <div class="mod-row">
+    <div style="flex:1;min-width:0">
+      <div class="mod-entry-top">
+        <span class="mod-category-badge">{{.Category}}</span>
+        <span class="mod-name">{{.Name}}</span>
+        {{if .UploadCount}}
+        <button class="mod-clip-btn" title="{{.UploadCount}} document{{if ne .UploadCount 1}}s{{end}}" onclick="openModUploadsViewer('{{.ID}}','{{.Name}}')">📎<span class="mod-clip-count">{{.UploadCount}}</span></button>
+        {{end}}
+        <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}" data-tooltip="coming soon: shop verification!">{{trustLabel .UploadCount}}</span>
+      </div>
+      {{with formatModMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
+      {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}
+    </div>
+    {{if $.IsOwner}}
+    <div class="mod-row-actions">
+      <button class="mod-upload-btn" title="Add document" onclick="openModUploadModal('{{.ID}}')">⬆</button>
+      <button class="mod-remove-btn" onclick="removeCarMod('{{.ID}}','{{$.Car.ID}}')">✕</button>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+  {{end}}
+</div>
+{{end}}
+
+{{define "maintenance-rows"}}
+<div class="mod-list-section">
+  {{if not .Maintenance}}
+  <div class="mod-empty">No maintenance records yet.</div>
+  {{else}}
+  {{range .Maintenance}}
+  <div class="mod-row">
+    <div style="flex:1;min-width:0">
+      <div class="mod-entry-top">
+        <span class="mod-category-badge">{{.Category}}</span>
+        <span class="mod-name">{{.Name}}</span>
+        {{if .UploadCount}}
+        <button class="mod-clip-btn" title="{{.UploadCount}} document{{if ne .UploadCount 1}}s{{end}}" onclick="openCarDocViewer('maintenance','{{.ID}}','{{.Name}}')">📎<span class="mod-clip-count">{{.UploadCount}}</span></button>
+        {{end}}
+        <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}" data-tooltip="coming soon: shop verification!">{{trustLabel .UploadCount}}</span>
+      </div>
+      {{with formatMaintMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
+      {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}
+    </div>
+    {{if $.IsOwner}}
+    <div class="mod-row-actions">
+      <button class="mod-upload-btn" title="Add document" onclick="openCarDocModal('maintenance','{{.ID}}')">⬆</button>
+      <button class="mod-remove-btn" onclick="removeCarMaintenance('{{.ID}}','{{$.Car.ID}}')">✕</button>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+  {{end}}
+</div>
+{{end}}
+
+{{define "mod-add-form"}}
+<div class="add-mod-wrap">
+  <button class="add-mod-toggle-btn" onclick="toggleAddMod('{{.Car.ID}}')">+ Add Mod</button>
+  <div id="add-mod-form-{{.Car.ID}}" class="add-mod-form" style="display:none">
+    <input id="mod-name-{{.Car.ID}}" class="add-mod-field" placeholder="Mod name *" autocomplete="off">
+    <div class="add-mod-row-2">
+      <select id="mod-cat-{{.Car.ID}}" class="add-mod-field">
+        <option value="">Category</option>
+        <option value="Engine">Engine</option>
+        <option value="Intake">Intake</option>
+        <option value="Exhaust">Exhaust</option>
+        <option value="Turbo/FI">Turbo/FI</option>
+        <option value="Suspension">Suspension</option>
+        <option value="Wheels">Wheels</option>
+        <option value="Tires">Tires</option>
+        <option value="Brakes">Brakes</option>
+        <option value="Exterior">Exterior</option>
+        <option value="Interior">Interior</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Transmission">Transmission</option>
+        <option value="Cooling">Cooling</option>
+        <option value="Fuel">Fuel</option>
+        <option value="Tuning">Tuning</option>
+        <option value="Safety">Safety</option>
+        <option value="Other">Other</option>
+      </select>
+      <div class="add-mod-labeled-field">
+        <label class="add-mod-label">Install date</label>
+        <input type="date" id="mod-date-{{.Car.ID}}" class="add-mod-field" style="margin:0">
+      </div>
+    </div>
+    <div class="add-mod-row-2">
+      <input type="number" id="mod-mileage-{{.Car.ID}}" class="add-mod-field" placeholder="Mileage at install">
+      <input type="number" id="mod-cost-{{.Car.ID}}" class="add-mod-field" placeholder="Cost ($)">
+    </div>
+    <textarea id="mod-notes-{{.Car.ID}}" class="add-mod-field" placeholder="Notes" rows="2"></textarea>
+    <div class="add-mod-actions">
+      <button class="btn-primary" style="font-size:13px;padding:8px 18px" onclick="submitAddMod('{{.Car.ID}}')">Save Mod</button>
+      <button class="btn-nav" style="font-size:13px;padding:8px 18px" onclick="toggleAddMod('{{.Car.ID}}')">Cancel</button>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "maintenance-add-form"}}
+<div class="add-mod-wrap">
+  <button class="add-mod-toggle-btn" onclick="toggleAddMaintenance('{{.Car.ID}}')">+ Add Record</button>
+  <div id="add-maintenance-form-{{.Car.ID}}" class="add-mod-form" style="display:none">
+    <input id="maintenance-name-{{.Car.ID}}" class="add-mod-field" placeholder="Service name *" autocomplete="off">
+    <div class="add-mod-row-2">
+      <select id="maintenance-cat-{{.Car.ID}}" class="add-mod-field">
+        <option value="">Category</option>
+        <option value="Oil Change">Oil Change</option>
+        <option value="Alignment">Alignment</option>
+        <option value="Tire Rotation">Tire Rotation</option>
+        <option value="Tire Balance">Tire Balance</option>
+        <option value="Brake Service">Brake Service</option>
+        <option value="Fluid Change">Fluid Change</option>
+        <option value="Dyno Pull">Dyno Pull</option>
+        <option value="Air Filter">Air Filter</option>
+        <option value="Spark Plugs">Spark Plugs</option>
+        <option value="Coolant Flush">Coolant Flush</option>
+        <option value="Transmission Service">Transmission Service</option>
+        <option value="Differential Service">Differential Service</option>
+        <option value="Fuel Filter">Fuel Filter</option>
+        <option value="Inspection">Inspection</option>
+        <option value="Other">Other</option>
+      </select>
+      <div class="add-mod-labeled-field">
+        <label class="add-mod-label">Service date</label>
+        <input type="date" id="maintenance-date-{{.Car.ID}}" class="add-mod-field" style="margin:0">
+      </div>
+    </div>
+    <div class="add-mod-row-2">
+      <input type="number" id="maintenance-mileage-{{.Car.ID}}" class="add-mod-field" placeholder="Mileage">
+      <input type="number" id="maintenance-cost-{{.Car.ID}}" class="add-mod-field" placeholder="Cost ($)">
+    </div>
+    <textarea id="maintenance-notes-{{.Car.ID}}" class="add-mod-field" placeholder="Notes" rows="2"></textarea>
+    <div class="add-mod-actions">
+      <button class="btn-primary" style="font-size:13px;padding:8px 18px" onclick="submitAddMaintenance('{{.Car.ID}}')">Save Record</button>
+      <button class="btn-nav" style="font-size:13px;padding:8px 18px" onclick="toggleAddMaintenance('{{.Car.ID}}')">Cancel</button>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "photo-strip"}}
+<div class="photo-strip" id="photo-strip-{{.Car.ID}}">
+  <button class="photo-strip-nav photo-strip-prev" onclick="photoStripNav('{{.Car.ID}}',-1)" disabled>‹</button>
+  {{range .Photos}}
+  <div class="photo-thumb strip-photo">
+    {{if $.IsOwner}}<button class="photo-thumb-delete" onclick="event.stopPropagation();deleteCarPhoto('{{.ID}}','{{$.Car.ID}}')">✕</button>{{end}}
+    <img class="photo-thumb-img" src="{{.URL}}">
+  </div>
+  {{end}}
+  <button class="photo-strip-nav photo-strip-next" onclick="photoStripNav('{{.Car.ID}}',1)" disabled>›</button>
+  {{if .IsOwner}}
+  <div class="photo-thumb-add"
+       data-car-id="{{.Car.ID}}"
+       data-max-photos="{{.MaxPhotos}}"
+       data-photo-count="{{.TotalPhotoCount}}"
+       onclick="openAddPhotoModal(this)">+</div>
+  {{end}}
+</div>
+{{end}}

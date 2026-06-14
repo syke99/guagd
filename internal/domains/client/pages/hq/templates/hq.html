@@ -291,26 +291,8 @@ function searchMembers(q) {
   if (!q.trim()) { results.innerHTML = ''; return; }
   _memberSearchTimer = setTimeout(() => {
     fetch('/api/v1/hq/members/search?q=' + encodeURIComponent(q))
-      .then(r => r.text())
-      .then(html => {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        results.innerHTML = '';
-        tmp.querySelectorAll('.search-result-item').forEach(a => {
-          const rawText = Array.from(a.childNodes)
-            .filter(n => n.nodeType === Node.TEXT_NODE)
-            .map(n => n.textContent.trim())
-            .join('');
-          const username = rawText.startsWith('@') ? rawText.slice(1) : rawText;
-          const badge = a.querySelector('.search-result-badge')?.textContent || '';
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'add-member-result-item';
-          btn.innerHTML = `<span>${rawText}</span><span class="search-result-badge">${badge}</span>`;
-          btn.onclick = () => addMemberDirect(username);
-          results.appendChild(btn);
-        });
-      });
+      .then(r => r.ok ? r.text() : '')
+      .then(html => { results.innerHTML = html; });
   }, 150);
 }
 
@@ -325,16 +307,14 @@ function addMemberDirect(username) {
     const grid = document.querySelector('.member-grid');
     const empty = grid && grid.querySelector('.hq-empty-state');
     if (empty) empty.remove();
-    const wrap = document.createElement('div');
-    wrap.className = 'member-card-wrap';
-    wrap.innerHTML =
-      `<a class="member-card" href="/garage/@${username}">` +
-        `<div class="member-card-thumb"><div class="member-card-avatar">👤</div></div>` +
-        `<div class="member-card-info"><div class="member-card-username">@${username}</div></div>` +
-      `</a>` +
-      `<button class="member-remove-btn" onclick="removeMember('${username}',this)">✕</button>`;
-    grid && grid.appendChild(wrap);
-    adjustMemberCount(1);
+    fetch('/fragments/hq-member-card?username=' + encodeURIComponent(username))
+      .then(r => r.ok ? r.text() : '')
+      .then(html => {
+        if (html && grid) {
+          grid.insertAdjacentHTML('beforeend', html);
+          adjustMemberCount(1);
+        }
+      });
   });
 }
 
