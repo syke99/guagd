@@ -52,6 +52,18 @@ border-radius: 16px;"></textarea>
 </div>
 {{end}}
 
+<!-- Share picker modal -->
+<div id="share-picker-modal" class="modal-overlay" style="display:none;z-index:900" onclick="if(event.target===this)closeShareModal()">
+  <div class="modal-box" style="max-width:320px">
+    <div class="modal-title">Share</div>
+    <p class="modal-message">Where would you like to share this from?</p>
+    <div class="modal-actions" style="flex-direction:column;gap:10px">
+      <button class="btn-primary" onclick="shareFrom('build')">From Build Page</button>
+      <button class="btn-primary" onclick="shareFrom('garage')">From Garage</button>
+    </div>
+  </div>
+</div>
+
 <!-- Car detail modal -->
 <div id="car-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeCarModal()">
   <div class="car-modal-inner">
@@ -645,12 +657,32 @@ function photoStripNav(carId, dir) {
   if (next) next.disabled = offset + 3 >= total;
 }
 
-function copyCar(btn, shortId) {
-  navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?car=' + shortId);
-  btn.textContent = 'Copied!';
-  btn.classList.add('copied');
-  btn.disabled = true;
-  setTimeout(() => { btn.textContent = 'Share'; btn.classList.remove('copied'); btn.disabled = false; }, 2000);
+let _shareShortId = null;
+
+function openShareModal(shortId) {
+  _shareShortId = shortId;
+  document.getElementById('share-picker-modal').style.display = 'flex';
+}
+
+function closeShareModal() {
+  document.getElementById('share-picker-modal').style.display = 'none';
+  _shareShortId = null;
+}
+
+function shareFrom(source) {
+  if (!_shareShortId) return;
+  const url = source === 'build'
+    ? window.location.origin + '/cars?c=' + _shareShortId
+    : window.location.origin + window.location.pathname + '?car=' + _shareShortId;
+  navigator.clipboard.writeText(url);
+  closeShareModal();
+  const btn = document.getElementById('car-copy-btn');
+  if (btn) {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = 'Share'; btn.classList.remove('copied'); btn.disabled = false; }, 2000);
+  }
 }
 
 function closeCarModal() {

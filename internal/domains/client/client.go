@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	carpkg "guagd/internal/domains/client/pages/car"
 	"guagd/internal/domains/client/pages/garage"
 	"guagd/internal/domains/client/pages/hq"
 	landingpkg "guagd/internal/domains/client/pages/landing"
@@ -35,6 +36,7 @@ type client struct {
 	garage    *garage.GarageClient
 	hq        *hq.HQClient
 	landing   *landingpkg.LandingClient
+	car       *carpkg.CarPageClient
 }
 
 func NewClient(baseRoute, publicURL string, db db.DB, store *storage.Client, heroBuildID, heroGarageID, heroClubID string) *client {
@@ -51,6 +53,7 @@ func NewClient(baseRoute, publicURL string, db db.DB, store *storage.Client, her
 		garage:    garage.NewGarageClient(db, store, sg),
 		hq:        hq.NewHQClient(db, store, sg),
 		landing:   lc,
+		car:       carpkg.NewCarPageClient(db, store, sg),
 	}
 }
 
@@ -168,6 +171,13 @@ func (c *client) Handlers() map[string]http.HandlerFunc {
 				return
 			}
 			c.hq.HQPage(w, r)
+		},
+		"/cars": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("HX-Request") != "true" {
+				http.ServeFileFS(w, r, app, "app/index.html")
+				return
+			}
+			c.car.CarPage(w, r)
 		},
 	}
 

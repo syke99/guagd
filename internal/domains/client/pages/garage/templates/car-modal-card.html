@@ -48,7 +48,7 @@
 </div>
 {{template "photo-strip" .}}
 <div class="build-url" style="margin:12px 0 0">
-  <button class="copy-btn" id="car-copy-btn" onclick="copyCar(this,'{{shortID .Car.ID}}')">Share</button>
+  <button class="copy-btn" id="car-copy-btn" onclick="openShareModal('{{shortID .Car.ID}}')">Share</button>
 </div>
 {{end}}
 

@@ -1,0 +1,193 @@
+{{define "car.html"}}
+{{template "nav" .}}
+
+<div class="car-page">
+
+  <!-- LEFT COLUMN -->
+  <div class="car-page-left">
+
+    <div class="car-carousel" id="car-carousel">
+      {{if .Photos}}
+      <div class="car-carousel-track">
+        {{range $i, $p := .Photos}}
+        <div class="car-carousel-slide{{if eq $i 0}} active{{end}}">
+          <img src="{{$p.URL}}" alt="">
+        </div>
+        {{end}}
+      </div>
+      {{if gt (len .Photos) 1}}
+      <button class="car-carousel-arrow car-carousel-prev" onclick="carouselNav(-1)">‹</button>
+      <button class="car-carousel-arrow car-carousel-next" onclick="carouselNav(1)">›</button>
+      <div class="car-carousel-dots">
+        {{range $i, $p := .Photos}}
+        <button class="car-carousel-dot{{if eq $i 0}} active{{end}}" onclick="carouselGoTo({{$i}})"></button>
+        {{end}}
+      </div>
+      {{end}}
+      {{else}}
+      <div class="car-carousel-empty">
+        <div class="car-carousel-empty-icon">📷</div>
+        <div class="car-carousel-empty-label">No photos yet</div>
+      </div>
+      {{end}}
+    </div>
+
+    <div class="car-page-info">
+      <div class="car-page-name">{{.Car.Year}} {{.Car.Make}} {{.Car.Model}}</div>
+      {{if .Car.Trim}}<div class="car-page-trim">{{.Car.Trim}}</div>{{end}}
+      <a href="/{{if eq .Owner.AcctType "club"}}hq{{else}}garage{{end}}/@{{.Owner.Username}}" class="car-owner-link">
+        {{if .Owner.AvatarURL}}<img src="{{.Owner.AvatarURL}}" class="car-owner-avatar-img" alt="">{{else}}<span class="car-owner-avatar-placeholder">👤</span>{{end}}
+        @{{.Owner.Username}}
+      </a>
+    </div>
+
+    <div class="car-history-section">
+      <div class="car-history-tab-bar">
+        <button class="car-history-tab active" onclick="switchHistoryTab('owners', this)">Owners</button>
+        <button class="car-history-tab" onclick="switchHistoryTab('shops', this)">Shops</button>
+      </div>
+      <div id="history-owners" class="car-history-panel">
+        <div class="car-history-row">
+          {{if .Owner.AvatarURL}}
+          <img src="{{.Owner.AvatarURL}}" class="history-avatar-img" alt="">
+          {{else}}
+          <div class="history-avatar-placeholder">👤</div>
+          {{end}}
+          <div class="history-row-info">
+            <div class="history-row-username">@{{.Owner.Username}}</div>
+            <div class="history-row-label">Current Owner</div>
+          </div>
+        </div>
+      </div>
+      <div id="history-shops" class="car-history-panel" style="display:none">
+        <div class="car-history-empty">Coming soon — shop verification</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="car-page-right">
+
+    <div class="car-page-stats">
+      <div class="stat"><div class="stat-val">{{len .Mods}}</div><div class="stat-label">Mods</div></div>
+      <div class="stat"><div class="stat-val">{{len .Maintenance}}</div><div class="stat-label">Maintenance</div></div>
+      <div class="stat"><div class="stat-val">0</div><div class="stat-label">Verified</div></div>
+      <div class="stat"><div class="stat-val">{{len .Docs}}</div><div class="stat-label">Docs</div></div>
+    </div>
+
+    <div class="build-tabs-container" style="flex:1;min-height:0">
+      <div class="build-tab-bar">
+        <button class="build-tab active" onclick="switchPageTab('mods', this)">Mods</button>
+        <button class="build-tab" onclick="switchPageTab('maint', this)">Maint.</button>
+        <button class="build-tab" onclick="switchPageTab('docs', this)">Docs</button>
+      </div>
+      <div class="build-tab-content" style="height:auto;overflow:visible;flex:1">
+
+        <div id="tab-mods" class="build-tab-panel car-page-tab-panel">
+          <div class="mod-list-section">
+            {{if not .Mods}}
+            <div class="mod-empty">No mods documented yet.</div>
+            {{else}}
+            {{range .Mods}}
+            <div class="mod-row">
+              <div style="flex:1;min-width:0">
+                <div class="mod-entry-top">
+                  <span class="mod-category-badge">{{.Category}}</span>
+                  <span class="mod-name">{{.Name}}</span>
+                  {{if .UploadCount}}<span class="mod-clip-btn">📎<span class="mod-clip-count">{{.UploadCount}}</span></span>{{end}}
+                  <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}">{{trustLabel .UploadCount}}</span>
+                </div>
+                {{with formatModMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
+                {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}
+              </div>
+            </div>
+            {{end}}
+            {{end}}
+          </div>
+        </div>
+
+        <div id="tab-maint" class="build-tab-panel car-page-tab-panel" style="display:none">
+          <div class="mod-list-section">
+            {{if not .Maintenance}}
+            <div class="mod-empty">No maintenance records yet.</div>
+            {{else}}
+            {{range .Maintenance}}
+            <div class="mod-row">
+              <div style="flex:1;min-width:0">
+                <div class="mod-entry-top">
+                  <span class="mod-category-badge">{{.Category}}</span>
+                  <span class="mod-name">{{.Name}}</span>
+                  {{if .UploadCount}}<span class="mod-clip-btn">📎<span class="mod-clip-count">{{.UploadCount}}</span></span>{{end}}
+                  <span class="trust-badge trust-badge--{{trustLevel .UploadCount}}">{{trustLabel .UploadCount}}</span>
+                </div>
+                {{with formatMaintMeta .}}<div class="mod-meta">{{.}}</div>{{end}}
+                {{if .Notes}}<div class="mod-notes">{{.Notes}}</div>{{end}}
+              </div>
+            </div>
+            {{end}}
+            {{end}}
+          </div>
+        </div>
+
+        <div id="tab-docs" class="build-tab-panel car-page-tab-panel" style="display:none">
+          <div class="mod-list-section">
+            {{if not .Docs}}
+            <div class="mod-empty">No documents attached yet.</div>
+            {{else}}
+            {{range .Docs}}
+            <div class="doc-row">
+              <div class="doc-icon">{{docIcon .ContentType}}</div>
+              <div class="doc-info">
+                <div class="doc-name">{{.Name}}</div>
+                <div class="doc-meta">{{.UploadType}} · {{.SourceName}}</div>
+              </div>
+              <a href="{{.URL}}" target="_blank" rel="noopener" class="doc-view-btn">View</a>
+            </div>
+            {{end}}
+            {{end}}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  let idx = 0;
+  const slides = Array.from(document.querySelectorAll('#car-carousel .car-carousel-slide'));
+  const dots   = Array.from(document.querySelectorAll('#car-carousel .car-carousel-dot'));
+
+  function goTo(n) {
+    slides[idx]?.classList.remove('active');
+    dots[idx]?.classList.remove('active');
+    idx = Math.max(0, Math.min(n, slides.length - 1));
+    slides[idx]?.classList.add('active');
+    dots[idx]?.classList.add('active');
+  }
+
+  window.carouselNav  = dir => goTo(idx + dir);
+  window.carouselGoTo = goTo;
+
+  window.switchPageTab = function(name, btn) {
+    document.querySelectorAll('.car-page-tab-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.build-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).style.display = '';
+    btn.classList.add('active');
+  };
+
+  window.switchHistoryTab = function(name, btn) {
+    document.querySelectorAll('.car-history-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.car-history-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('history-' + name).style.display = '';
+    btn.classList.add('active');
+  };
+})();
+</script>
+{{end}}
+
+{{define "nav-page-controls"}}{{end}}
+{{define "nav-page-dropdown"}}{{end}}
