@@ -239,6 +239,7 @@ func (h *HQClient) searchNonMembers(ctx context.Context, clubAccountID, q string
 	return results, err
 }
 
+
 func (h *HQClient) addMember(ctx context.Context, clubAccountID, memberUsername string) error {
 	return h.db.Exec(
 		ctx,

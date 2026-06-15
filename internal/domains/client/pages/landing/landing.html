@@ -256,70 +256,95 @@
         <div class="carousel-slide">
           {{if .Club}}
           <div class="panel-card">
-            <div class="hq-profile" style="height:140px;border-radius:0;">
-              {{if .Club.CoverPhotoURL}}<img class="profile-cover-img" style="border-radius:0;" src="{{.Club.CoverPhotoURL}}" alt="">{{end}}
-              <div class="hq-profile-tab">
-                <div class="panel-avatar">🏁</div>
-                <div>
-                  <div class="panel-title">@{{.Club.Username}}'s Club HQ</div>
-                  <div class="panel-sub">@{{.Club.Username}} · {{.Club.MemberCount}} members</div>
+            <div class="hero-garage-layout">
+              <!-- Left: banner + member grid -->
+              <div class="hero-garage-left">
+                <div class="hq-profile" style="height:90px;border-radius:0;flex-shrink:0;">
+                  {{if .Club.CoverPhotoURL}}<img class="profile-cover-img" style="border-radius:0;" src="{{.Club.CoverPhotoURL}}" alt="">{{end}}
+                  <div class="hq-profile-tab" style="padding:8px 10px;">
+                    <div class="panel-avatar" style="width:28px;height:28px;font-size:11px;">🏁</div>
+                    <div>
+                      <div class="panel-title" style="font-size:11px;">@{{.Club.Username}}'s Club HQ</div>
+                      <div class="panel-sub" style="font-size:10px;">{{.Club.MemberCount}} members</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-grid" style="padding:8px;gap:6px;">
+                  {{range .Club.Members}}
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb-avatar" style="height:32px;font-size:14px;">
+                      {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" style="width:100%;height:100%;object-fit:cover;">{{else}}👤{{end}}
+                    </div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">@{{.Username}}</div></div>
+                  </button>
+                  {{end}}
                 </div>
               </div>
-            </div>
-            <div class="panel-grid">
-              {{range .Club.Members}}
-              <button class="grid-btn">
-                <div class="grid-btn-thumb-avatar">
-                  {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="" style="width:100%;height:100%;object-fit:cover;">{{else}}👤{{end}}
+              <!-- Right: cork board + info/meets + music -->
+              <div class="hero-garage-right">
+                <div class="hero-cork-board">
+                  <div class="hero-cork-label">Cork Board</div>
                 </div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">@{{.Username}}</div>
-                  <div class="grid-btn-meta">{{.CarCount}} vehicles</div>
+                <div class="hero-garage-right-bottom">
+                  <div class="hero-info-panel">
+                    <div class="hero-info-stat"><span class="hero-stat-val">{{.Club.MemberCount}}</span><span class="hero-stat-lbl">Members</span></div>
+                    <div class="hero-info-stat"><span class="hero-stat-val">—</span><span class="hero-stat-lbl">Meets</span></div>
+                  </div>
+                  <div class="hero-music-panel">
+                    <div class="hero-music-icon">♪</div>
+                  </div>
                 </div>
-              </button>
-              {{end}}
+              </div>
             </div>
           </div>
           {{else}}
           <div class="panel-card">
-            <div class="hq-profile" style="height:140px;border-radius:0;">
-              <div class="hq-profile-tab">
-                <div class="panel-avatar">🏁</div>
-                <div>
-                  <div class="panel-title">Pacific NW Builds</div>
-                  <div class="panel-sub">@pnw_builds · 12 members</div>
+            <div class="hero-garage-layout">
+              <!-- Left: banner + member grid -->
+              <div class="hero-garage-left">
+                <div class="hq-profile" style="height:90px;border-radius:0;flex-shrink:0;">
+                  <div class="hq-profile-tab" style="padding:8px 10px;">
+                    <div class="panel-avatar" style="width:28px;height:28px;font-size:11px;">🏁</div>
+                    <div>
+                      <div class="panel-title" style="font-size:11px;">Pacific NW Builds</div>
+                      <div class="panel-sub" style="font-size:10px;">12 members</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-grid" style="padding:8px;gap:6px;">
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb-avatar" style="height:32px;font-size:14px;">👤</div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">@jdm_john</div></div>
+                  </button>
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb-avatar" style="height:32px;font-size:14px;">👤</div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">@turbo_sara</div></div>
+                  </button>
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb-avatar" style="height:32px;font-size:14px;">👤</div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">@evo_mike</div></div>
+                  </button>
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb-avatar" style="height:32px;font-size:14px;">👤</div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">@stance_alex</div></div>
+                  </button>
                 </div>
               </div>
-            </div>
-            <div class="panel-grid">
-              <button class="grid-btn">
-                <div class="grid-btn-thumb-avatar">👤</div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">@jdm_john</div>
-                  <div class="grid-btn-meta">4 vehicles</div>
+              <!-- Right: cork board + info/meets + music -->
+              <div class="hero-garage-right">
+                <div class="hero-cork-board">
+                  <div class="hero-cork-label">Cork Board</div>
                 </div>
-              </button>
-              <button class="grid-btn">
-                <div class="grid-btn-thumb-avatar">👤</div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">@turbo_sara</div>
-                  <div class="grid-btn-meta">2 vehicles</div>
+                <div class="hero-garage-right-bottom">
+                  <div class="hero-info-panel">
+                    <div class="hero-info-stat"><span class="hero-stat-val">12</span><span class="hero-stat-lbl">Members</span></div>
+                    <div class="hero-info-stat"><span class="hero-stat-val">3</span><span class="hero-stat-lbl">Meets</span></div>
+                  </div>
+                  <div class="hero-music-panel">
+                    <div class="hero-music-icon">♪</div>
+                  </div>
                 </div>
-              </button>
-              <button class="grid-btn">
-                <div class="grid-btn-thumb-avatar">👤</div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">@evo_mike</div>
-                  <div class="grid-btn-meta">3 vehicles</div>
-                </div>
-              </button>
-              <button class="grid-btn">
-                <div class="grid-btn-thumb-avatar">👤</div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">@stance_alex</div>
-                  <div class="grid-btn-meta">1 vehicle</div>
-                </div>
-              </button>
+              </div>
             </div>
           </div>
           {{end}}

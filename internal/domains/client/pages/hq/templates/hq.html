@@ -1,19 +1,21 @@
 {{define "hq.html"}}
 {{template "nav" .}}
 
+<style>{{.SafeCSS}}</style>
+
 <div class="hq-wrap">
-  <div class="grid-stack" id="hq-grid">
-    {{range .Layout}}
-    <div class="grid-stack-item"
-         gs-x="{{.X}}" gs-y="{{.Y}}" gs-w="{{.W}}" gs-h="{{.H}}"
-         data-component="{{.Component}}">
-      <div class="grid-stack-item-content" id="gs-{{.Component}}">
-        <span class="gs-handle">⠿</span>
-        {{if eq .Component "hq-profile-header"}}{{template "hq-profile-header" $}}{{end}}
-        {{if eq .Component "member-grid"}}{{template "member-grid" $}}{{end}}
+  <div class="hq-layout">
+    <div class="hq-left">
+      <div id="gs-hq-profile-header">{{template "hq-profile-header" $}}</div>
+      <div id="gs-member-grid">{{template "member-grid" $}}</div>
+    </div>
+    <div class="hq-right">
+      <div id="gs-cork-board">{{template "hq-cork-board" $}}</div>
+      <div class="hq-right-bottom">
+        <div id="gs-info-panel">{{template "hq-info-meets" $}}</div>
+        <div id="gs-music-widget">{{template "hq-music-widget" $}}</div>
       </div>
     </div>
-    {{end}}
   </div>
 </div>
 
@@ -44,10 +46,10 @@
 {{end}}
 
 {{if .IsOwner}}
-<div id="theme-editor" class="theme-editor">
+<div id="theme-editor" class="theme-editor" style="display:none">
   <div class="theme-editor-title">
     Style
-    <button class="btn-link" onclick="setEditMode('style')">✕</button>
+    <button class="btn-link" onclick="toggleEdit()">✕</button>
   </div>
 
   <div class="theme-section">
@@ -61,15 +63,26 @@
 
   <div class="theme-section">
     <div class="theme-section-title">Components</div>
-    {{range .Layout}}
     <details class="component-style-editor">
-      <summary>{{.Component}}</summary>
-      <textarea class="component-css-input"
-                data-component="{{.Component}}"
-                placeholder="background: #1c1c1c;
-border-radius: 16px;"></textarea>
+      <summary>hq-profile-header</summary>
+      <textarea class="component-css-input" data-component="hq-profile-header" placeholder="background: #1c1c1c;"></textarea>
     </details>
-    {{end}}
+    <details class="component-style-editor">
+      <summary>member-grid</summary>
+      <textarea class="component-css-input" data-component="member-grid" placeholder="background: #1c1c1c;"></textarea>
+    </details>
+    <details class="component-style-editor">
+      <summary>cork-board</summary>
+      <textarea class="component-css-input" data-component="cork-board" placeholder="background: #1c1c1c;"></textarea>
+    </details>
+    <details class="component-style-editor">
+      <summary>info-panel</summary>
+      <textarea class="component-css-input" data-component="info-panel" placeholder="background: #1c1c1c;"></textarea>
+    </details>
+    <details class="component-style-editor">
+      <summary>music-widget</summary>
+      <textarea class="component-css-input" data-component="music-widget" placeholder="background: #1c1c1c;"></textarea>
+    </details>
   </div>
 
   <button class="btn-primary signup-submit" onclick="saveStyle()">Save</button>
@@ -77,57 +90,20 @@ border-radius: 16px;"></textarea>
 {{end}}
 
 <script>
-const grid = GridStack.init({
-  column: 12,
-  cellHeight: 80,
-  staticGrid: true,
-  float: false,
-});
-
 {{if .IsOwner}}
-let editMode = null;
+let editOpen = false;
 
 function toggleEdit() {
-  const subRows = document.getElementById('edit-sub-rows');
+  editOpen = !editOpen;
   const editBtn = document.getElementById('btn-edit');
-  const open = subRows && subRows.style.display !== 'none';
-  if (open) {
-    if (subRows) subRows.style.display = 'none';
-    editBtn.classList.remove('active');
-    applyMode(null);
-  } else {
-    if (subRows) subRows.style.display = 'flex';
-    editBtn.classList.add('active');
-    applyMode('edit');
-  }
-}
-
-function setEditMode(mode) {
-  applyMode(editMode === mode ? 'edit' : mode);
-}
-
-function applyMode(mode) {
-  editMode = mode;
-
-  document.getElementById('btn-layout').classList.toggle('active', mode === 'layout');
-  document.getElementById('btn-style').classList.toggle('active', mode === 'style');
-
-  grid.setStatic(mode !== 'layout');
-  document.getElementById('hq-grid').classList.toggle('edit-layout-active', mode === 'layout');
-  document.getElementById('hq-grid').classList.toggle('edit-style-active', mode === 'style');
-
   const te = document.getElementById('theme-editor');
-  te.style.display = mode === 'style' ? 'block' : 'none';
-
-  if (mode !== 'layout') {
-    const panel = document.getElementById('add-member-panel');
-    if (panel) panel.style.display = 'none';
-  }
+  if (editBtn) editBtn.classList.toggle('active', editOpen);
+  if (te) te.style.display = editOpen ? 'block' : 'none';
 
   const coverEdit = document.getElementById('profile-cover-edit');
   const coverRemove = document.getElementById('profile-cover-remove');
-  if (coverEdit) coverEdit.style.display = mode !== null ? 'flex' : 'none';
-  if (coverRemove) coverRemove.style.display = (mode !== null && !!document.getElementById('profile-cover-img')) ? 'flex' : 'none';
+  if (coverEdit) coverEdit.style.display = editOpen ? 'flex' : 'none';
+  if (coverRemove) coverRemove.style.display = (editOpen && !!document.getElementById('profile-cover-img')) ? 'flex' : 'none';
 }
 
 // ── Upload modal ──────────────────────────────────────────────
@@ -152,7 +128,6 @@ function closeUploadModal() {
 document.getElementById('upload-drop-zone').addEventListener('click', function() {
   document.getElementById('upload-file-input').click();
 });
-
 document.getElementById('upload-drop-zone').addEventListener('dragover', function(e) {
   e.preventDefault();
   this.classList.add('drag-over');
@@ -166,7 +141,6 @@ document.getElementById('upload-drop-zone').addEventListener('drop', function(e)
   const file = e.dataTransfer.files[0];
   if (file) previewFile(file);
 });
-
 document.getElementById('upload-file-input').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (file) previewFile(file);
@@ -264,6 +238,7 @@ async function removeProfileCover() {
   if (coverRemove) coverRemove.style.display = 'none';
 }
 
+// ── Member management ─────────────────────────────────────────
 function toggleAddMember() {
   const panel = document.getElementById('add-member-panel');
   if (!panel) return;
@@ -313,6 +288,7 @@ function addMemberDirect(username) {
         if (html && grid) {
           grid.insertAdjacentHTML('beforeend', html);
           adjustMemberCount(1);
+          requestAnimationFrame(syncCorkBoard);
         }
       });
   });
@@ -339,23 +315,34 @@ function handleMemberSearchKey(e) {
   }
 }
 
-grid.on('change', function() {
-  if (editMode !== 'layout') return;
-  const layout = [];
-  grid.getGridItems().forEach(el => {
-    const node = el.gridstackNode;
-    layout.push({
-      component: el.dataset.component,
-      x: node.x, y: node.y, w: node.w, h: node.h,
-    });
-  });
-  fetch('/api/v1/hq/layout', {
+function removeMember(username, btn) {
+  fetch('/api/v1/hq/members/remove', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(layout),
+    body: JSON.stringify({username}),
+  }).then(r => {
+    if (!r.ok) return;
+    const wrap = btn && btn.closest('.member-card-wrap');
+    if (wrap) wrap.remove();
+    adjustMemberCount(-1);
+    const grid = document.querySelector('.member-grid');
+    if (grid && !grid.querySelector('.member-card-wrap')) {
+      grid.innerHTML = '<div class="hq-empty-state">No members yet.</div>';
+    }
+    requestAnimationFrame(syncCorkBoard);
   });
-});
+}
 
+function adjustMemberCount(delta) {
+  const sub = document.querySelector('#gs-hq-profile-header .panel-sub');
+  if (!sub) return;
+  const m = sub.textContent.match(/(\d+)\s+member/);
+  if (!m) return;
+  const n = parseInt(m[1]) + delta;
+  sub.textContent = sub.textContent.replace(/\d+\s+members?/, n + ' member' + (n !== 1 ? 's' : ''));
+}
+
+// ── Style editor ──────────────────────────────────────────────
 function parseComponentCSS(text) {
   const styles = {};
   text.split('\n').forEach(line => {
@@ -402,33 +389,48 @@ function saveStyle() {
     });
   });
 }
-
-function removeMember(username, btn) {
-  fetch('/api/v1/hq/members/remove', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username}),
-  }).then(r => {
-    if (!r.ok) return;
-    const wrap = btn && btn.closest('.member-card-wrap');
-    if (wrap) wrap.remove();
-    adjustMemberCount(-1);
-    const grid = document.querySelector('.member-grid');
-    if (grid && !grid.querySelector('.member-card-wrap')) {
-      grid.innerHTML = '<div class="hq-empty-state">No members yet.</div>';
-    }
-  });
-}
-
-function adjustMemberCount(delta) {
-  const sub = document.querySelector('.panel-sub');
-  if (!sub) return;
-  const m = sub.textContent.match(/(\d+)\s+member/);
-  if (!m) return;
-  const n = parseInt(m[1]) + delta;
-  sub.textContent = sub.textContent.replace(/\d+\s+members?/, n + ' member' + (n !== 1 ? 's' : ''));
-}
 {{end}}
+
+// ── Info / Meets tabs ─────────────────────────────────────────
+function switchHQTab(tab) {
+  document.querySelectorAll('.hq-info-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.hq-info-tab-content').forEach(c => c.style.display = c.dataset.tab === tab ? 'block' : 'none');
+}
+
+// ── Music widget ──────────────────────────────────────────────
+function saveMusic() {
+  // TODO: persist to DB
+}
+
+// ── Cork board height sync ────────────────────────────────────
+function syncCorkBoard() {
+  const corkEl = document.getElementById('gs-cork-board');
+  if (!corkEl) return;
+
+  const memberList = document.getElementById('gs-member-grid');
+  const cards = memberList ? Array.from(memberList.querySelectorAll('.member-card-wrap')) : [];
+
+  if (cards.length === 0) {
+    const profileEl = document.getElementById('gs-hq-profile-header');
+    if (profileEl) corkEl.style.minHeight = profileEl.offsetHeight + 'px';
+    return;
+  }
+
+  const corkTop = corkEl.getBoundingClientRect().top;
+  const firstTop = cards[0].getBoundingClientRect().top;
+  let firstRowBottom = 0;
+  for (const card of cards) {
+    if (card.getBoundingClientRect().top < firstTop + 10) {
+      firstRowBottom = Math.max(firstRowBottom, card.getBoundingClientRect().bottom);
+    }
+  }
+  if (firstRowBottom > corkTop) {
+    corkEl.style.minHeight = (firstRowBottom - corkTop) + 'px';
+  }
+}
+
+requestAnimationFrame(syncCorkBoard);
+window.addEventListener('resize', syncCorkBoard);
 </script>
 {{end}}
 
@@ -439,12 +441,6 @@ function adjustMemberCount(delta) {
 {{end}}
 
 {{define "nav-page-dropdown"}}
-{{if .IsOwner}}
-<div id="edit-sub-rows" style="display:none">
-  <button id="btn-layout" class="nav-menu-subitem" onclick="setEditMode('layout')">Layout</button>
-  <button id="btn-style" class="nav-menu-subitem" onclick="setEditMode('style')">Style</button>
-</div>
-{{end}}
 {{if .AccountShortID}}
 <a href="/requests?u={{.AccountShortID}}" class="nav-menu-item">Requests</a>
 {{end}}
@@ -463,7 +459,7 @@ function adjustMemberCount(delta) {
     <div class="panel-avatar">🏁</div>
     <div>
       <div class="panel-title">@{{.Username}}'s Club HQ</div>
-      <div class="panel-sub">@{{.Username}} · {{.MemberCount}} members</div>
+      <div class="panel-sub">@{{.Username}} · {{.MemberCount}} {{if eq .MemberCount 1}}member{{else}}members{{end}}</div>
     </div>
   </div>
 </div>
@@ -472,7 +468,6 @@ function adjustMemberCount(delta) {
 {{define "member-grid"}}
 <div class="member-grid-wrap">
   {{if .IsOwner}}
-  <button class="edit-component-btn" data-component="member-grid" title="Edit styles">✏</button>
   <div class="add-member-tab-anchor">
     <button class="add-member-btn" onclick="toggleAddMember()">+ Add Member</button>
     <div id="add-member-panel" class="add-member-panel" style="display:none">
@@ -511,5 +506,44 @@ function adjustMemberCount(delta) {
     <div class="hq-empty-state">No members yet.</div>
     {{end}}
   </div>
+</div>
+{{end}}
+
+{{define "hq-cork-board"}}
+<div class="cork-board-inner">
+  <div class="cork-board-header">
+    <span class="cork-board-title">Cork Board</span>
+  </div>
+  <div class="cork-board-content">
+    <span class="cork-board-empty">Stickers coming soon</span>
+  </div>
+</div>
+{{end}}
+
+{{define "hq-info-meets"}}
+<div class="garage-info-inner">
+  <div class="info-tab-bar">
+    <button class="info-tab hq-info-tab active" data-tab="info" onclick="switchHQTab('info')">Info</button>
+    <button class="info-tab hq-info-tab" data-tab="meets" onclick="switchHQTab('meets')">Meets</button>
+  </div>
+  <div class="hq-info-tab-content" data-tab="info">
+    <div class="info-stat-grid">
+      <div>
+        <div class="info-stat-value">{{.MemberCount}}</div>
+        <div class="info-stat-label">Members</div>
+      </div>
+    </div>
+  </div>
+  <div class="hq-info-tab-content" data-tab="meets" style="display:none">
+    <div class="cork-board-empty" style="padding:16px 0;">No meets scheduled.</div>
+  </div>
+</div>
+{{end}}
+
+{{define "hq-music-widget"}}
+<div class="music-inner">
+  <div class="music-widget-label">Music</div>
+  <input class="music-url-input" type="url" id="music-url" placeholder="YouTube / Spotify / Apple Music URL">
+  <button class="music-save-btn" onclick="saveMusic()">Save</button>
 </div>
 {{end}}
