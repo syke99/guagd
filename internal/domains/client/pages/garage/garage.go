@@ -23,8 +23,12 @@ import (
 //go:embed templates/*
 var templates embed.FS
 
+var garageFuncMap = template.FuncMap{
+	"fmtNumber": fmtNumber,
+}
+
 var garageTemplate = template.Must(
-	template.Must(template.New("").Parse(shared.NavTemplate)).
+	template.Must(template.New("").Funcs(garageFuncMap).Parse(shared.NavTemplate)).
 		ParseFS(templates, "templates/garage.html"),
 )
 
@@ -842,6 +846,28 @@ func (g *GarageClient) getVerificationCounts(ctx context.Context, carID string) 
 		carID,
 	)
 	return counts, err
+}
+
+type garageStats struct {
+	TotalMods        int `db:"total_mods"`
+	TotalMaintenance int `db:"total_maintenance"`
+	TotalSpend       int `db:"total_spend"`
+}
+
+func (g *GarageClient) getGarageStats(ctx context.Context, ownerID string) (garageStats, error) {
+	var stats garageStats
+	err := g.db.QueryRow(ctx,
+		`SELECT
+		    (SELECT COUNT(*)::int FROM car_mods cm JOIN cars c ON c.id = cm.car_id WHERE c.owner_id = $1::uuid) AS total_mods,
+		    (SELECT COUNT(*)::int FROM car_maintenance mnt JOIN cars c ON c.id = mnt.car_id WHERE c.owner_id = $1::uuid) AS total_maintenance,
+		    (
+		      (SELECT COALESCE(SUM(cm.cost), 0)::int FROM car_mods cm JOIN cars c ON c.id = cm.car_id WHERE c.owner_id = $1::uuid) +
+		      (SELECT COALESCE(SUM(mnt.cost), 0)::int FROM car_maintenance mnt JOIN cars c ON c.id = mnt.car_id WHERE c.owner_id = $1::uuid)
+		    ) AS total_spend`,
+		db.WithResultOf(&stats),
+		ownerID,
+	)
+	return stats, err
 }
 
 func (g *GarageClient) addMaintenanceUpload(ctx context.Context, accountID, maintenanceID, objectKey, name, uploadType, contentType string) (models.CarUpload, error) {

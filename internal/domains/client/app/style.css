@@ -1023,6 +1023,82 @@ h1 em {
   padding: 18px 22px 22px;
 }
 
+/* Hero card: garage two-column layout preview */
+.hero-garage-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+}
+.hero-garage-left {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border2);
+}
+.hero-garage-right {
+  display: flex;
+  flex-direction: column;
+}
+.hero-cork-board {
+  flex: 1;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(180,120,60,0.08) 0px,
+    rgba(180,120,60,0.08) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+.hero-cork-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.hero-garage-right-bottom {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0;
+  border-top: 0;
+}
+.hero-info-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-right: 1px solid var(--border2);
+}
+.hero-info-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.hero-stat-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.hero-stat-lbl {
+  font-size: 9px;
+  color: var(--muted);
+}
+.hero-music-panel {
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg3);
+}
+.hero-music-icon {
+  font-size: 14px;
+  opacity: 0.4;
+}
+
 .grid-btn {
   background: var(--bg3);
   border: 1px solid var(--border2);
@@ -1629,11 +1705,151 @@ footer span { font-size: 13px; color: var(--muted); }
   margin: 0 auto;
 }
 
+/* Two-column layout */
+.garage-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.garage-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.garage-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.garage-right-bottom {
+  display: grid;
+  grid-template-columns: 1fr 190px;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .garage-layout { grid-template-columns: 1fr; }
+  .garage-right-bottom { grid-template-columns: 1fr; }
+}
+
+/* Shared panel style for right-column sections */
+.cork-board-inner,
+.garage-info-inner,
+.music-inner {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.garage-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* Cork board */
+#gs-cork-board {
+  display: flex;
+  flex-direction: column;
+}
+.cork-board-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.cork-board-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cork-board-empty {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Info / Awards tabs */
+.info-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.info-tab {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 4px 12px 8px;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.info-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.info-tab-content { padding: 2px 0; }
+.info-stat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.info-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.info-stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* Music widget */
+.music-url-input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: var(--text);
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+.music-url-input:focus { outline: none; border-color: var(--accent); }
+.music-save-btn {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 0;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.music-save-btn:hover { opacity: 0.85; }
+
 .garage-profile {
-  height: 100%;
   position: relative;
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, var(--bg2)), var(--bg2));
   border-radius: 12px;
+  min-height: 130px;
 }
 
 .garage-profile-tab {
@@ -1652,18 +1868,19 @@ footer span { font-size: 13px; color: var(--muted); }
 }
 
 .car-grid-wrap {
-  height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .car-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  padding: 18px 22px;
-  overflow-y: auto;
+  padding: 14px;
+  overflow-x: hidden;
   flex: 1;
 }
 

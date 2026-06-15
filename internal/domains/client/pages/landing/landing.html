@@ -152,61 +152,101 @@
         <div class="carousel-slide">
           {{if .Garage}}
           <div class="panel-card">
-            <div class="garage-profile" style="height:140px;border-radius:0;">
-              {{if .Garage.CoverPhotoURL}}<img class="profile-cover-img" style="border-radius:0;" src="{{.Garage.CoverPhotoURL}}" alt="">{{end}}
-              <div class="garage-profile-tab">
-                <div class="panel-avatar-wrap">
-                  <div class="panel-avatar">
-                    {{if .Garage.AvatarURL}}<img src="{{.Garage.AvatarURL}}" alt="">{{else}}👤{{end}}
+            <div class="hero-garage-layout">
+              <!-- Left: banner + car grid -->
+              <div class="hero-garage-left">
+                <div class="garage-profile" style="height:90px;border-radius:0;flex-shrink:0;">
+                  {{if .Garage.CoverPhotoURL}}<img class="profile-cover-img" style="border-radius:0;" src="{{.Garage.CoverPhotoURL}}" alt="">{{end}}
+                  <div class="garage-profile-tab" style="padding:8px 10px;">
+                    <div class="panel-avatar-wrap">
+                      <div class="panel-avatar" style="width:28px;height:28px;font-size:11px;">
+                        {{if .Garage.AvatarURL}}<img src="{{.Garage.AvatarURL}}" alt="">{{else}}👤{{end}}
+                      </div>
+                    </div>
+                    <div>
+                      <div class="panel-title" style="font-size:11px;">@{{.Garage.Username}}'s Garage</div>
+                      <div class="panel-sub" style="font-size:10px;">{{.Garage.CarCount}} {{if eq .Garage.CarCount 1}}vehicle{{else}}vehicles{{end}}</div>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <div class="panel-title">@{{.Garage.Username}}'s Garage</div>
-                  <div class="panel-sub">@{{.Garage.Username}} · {{.Garage.CarCount}} {{if eq .Garage.CarCount 1}}vehicle{{else}}vehicles{{end}}</div>
+                <div class="panel-grid" style="padding:8px;gap:6px;">
+                  {{range .Garage.Cars}}
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb" style="height:36px;{{if .ThumbURL}}background-image:url('{{.ThumbURL}}');background-size:cover;background-position:center;{{end}}"></div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">{{.Name}}</div></div>
+                  </button>
+                  {{end}}
                 </div>
               </div>
-            </div>
-            <div class="panel-grid">
-              {{range .Garage.Cars}}
-              <button class="grid-btn">
-                <div class="grid-btn-thumb" style="{{if .ThumbURL}}background-image:url('{{.ThumbURL}}');background-size:cover;background-position:center;{{end}}"></div>
-                <div class="grid-btn-info">
-                  <div class="grid-btn-name">{{.Name}}</div>
+              <!-- Right: cork board + stats + music -->
+              <div class="hero-garage-right">
+                <div class="hero-cork-board">
+                  <div class="hero-cork-label">Cork Board</div>
                 </div>
-              </button>
-              {{end}}
+                <div class="hero-garage-right-bottom">
+                  <div class="hero-info-panel">
+                    <div class="hero-info-stat"><span class="hero-stat-val">—</span><span class="hero-stat-lbl">Mods</span></div>
+                    <div class="hero-info-stat"><span class="hero-stat-val">—</span><span class="hero-stat-lbl">Service</span></div>
+                    <div class="hero-info-stat"><span class="hero-stat-val">—</span><span class="hero-stat-lbl">Spend</span></div>
+                  </div>
+                  <div class="hero-music-panel">
+                    <div class="hero-music-icon">♪</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           {{else}}
           <div class="panel-card">
-            <div class="garage-profile" style="height:140px;border-radius:0;">
-              <div class="garage-profile-tab">
-                <div class="panel-avatar-wrap">
-                  <div class="panel-avatar">👤</div>
+            <div class="hero-garage-layout">
+              <!-- Left: banner + car grid -->
+              <div class="hero-garage-left">
+                <div class="garage-profile" style="height:90px;border-radius:0;flex-shrink:0;">
+                  <div class="garage-profile-tab" style="padding:8px 10px;">
+                    <div class="panel-avatar-wrap">
+                      <div class="panel-avatar" style="width:28px;height:28px;font-size:11px;">👤</div>
+                    </div>
+                    <div>
+                      <div class="panel-title" style="font-size:11px;">John's Garage</div>
+                      <div class="panel-sub" style="font-size:10px;">4 vehicles</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div class="panel-title">John's Garage</div>
-                  <div class="panel-sub">@jdm_john · 4 vehicles</div>
+                <div class="panel-grid" style="padding:8px;gap:6px;">
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb" style="height:36px;"></div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">2019 Subaru WRX STI</div></div>
+                  </button>
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb" style="height:36px;"></div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">2003 Nissan 350Z</div></div>
+                  </button>
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb" style="height:36px;"></div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">2015 Ford Mustang GT</div></div>
+                  </button>
+                  <button class="grid-btn" style="padding:5px;">
+                    <div class="grid-btn-thumb" style="height:36px;"></div>
+                    <div class="grid-btn-info" style="padding:3px 0 0;"><div class="grid-btn-name" style="font-size:9px;">1994 Toyota Supra</div></div>
+                  </button>
                 </div>
               </div>
-            </div>
-            <div class="panel-grid">
-              <button class="grid-btn">
-                <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info"><div class="grid-btn-name">2019 Subaru WRX STI</div></div>
-              </button>
-              <button class="grid-btn">
-                <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info"><div class="grid-btn-name">2003 Nissan 350Z</div></div>
-              </button>
-              <button class="grid-btn">
-                <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info"><div class="grid-btn-name">2015 Ford Mustang GT</div></div>
-              </button>
-              <button class="grid-btn">
-                <div class="grid-btn-thumb"></div>
-                <div class="grid-btn-info"><div class="grid-btn-name">1994 Toyota Supra</div></div>
-              </button>
+              <!-- Right: cork board + stats + music -->
+              <div class="hero-garage-right">
+                <div class="hero-cork-board">
+                  <div class="hero-cork-label">Cork Board</div>
+                </div>
+                <div class="hero-garage-right-bottom">
+                  <div class="hero-info-panel">
+                    <div class="hero-info-stat"><span class="hero-stat-val">24</span><span class="hero-stat-lbl">Mods</span></div>
+                    <div class="hero-info-stat"><span class="hero-stat-val">18</span><span class="hero-stat-lbl">Service</span></div>
+                    <div class="hero-info-stat"><span class="hero-stat-val">$14k</span><span class="hero-stat-lbl">Spend</span></div>
+                  </div>
+                  <div class="hero-music-panel">
+                    <div class="hero-music-icon">♪</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           {{end}}

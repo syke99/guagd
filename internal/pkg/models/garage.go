@@ -19,4 +19,7 @@ type GaragePageData struct {
 	SafeCSS            template.CSS
 	CoverPhotoURL      string
 	AvatarURL          string
+	TotalMods          int
+	TotalMaintenance   int
+	TotalSpend         int
 }

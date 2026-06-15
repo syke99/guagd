@@ -42,6 +42,11 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 		cars = make([]models.Car, 0)
 	}
 
+	stats, err := g.getGarageStats(r.Context(), user.AccountID)
+	if err != nil {
+		log.Printf("garagePage: get stats: %s", err)
+	}
+
 	var accountShortID string
 	if isAuthenticated {
 		if isOwner {
@@ -56,16 +61,19 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := models.GaragePageData{
-		Username:        user.Username,
-		IsOwner:         isOwner,
-		IsAuthenticated: isAuthenticated,
-		AccountShortID:  accountShortID,
-		CarCount:        len(cars),
-		Cars:            cars,
-		Layout:          layout,
-		SafeCSS:         css.BuildTheme(theme),
-		CoverPhotoURL:   coverPhotoURL,
-		AvatarURL:       avatarURL,
+		Username:         user.Username,
+		IsOwner:          isOwner,
+		IsAuthenticated:  isAuthenticated,
+		AccountShortID:   accountShortID,
+		CarCount:         len(cars),
+		Cars:             cars,
+		Layout:           layout,
+		SafeCSS:          css.BuildTheme(theme),
+		CoverPhotoURL:    coverPhotoURL,
+		AvatarURL:        avatarURL,
+		TotalMods:        stats.TotalMods,
+		TotalMaintenance: stats.TotalMaintenance,
+		TotalSpend:       stats.TotalSpend,
 	}
 
 	w.Header().Set("Content-Type", "text/html")
