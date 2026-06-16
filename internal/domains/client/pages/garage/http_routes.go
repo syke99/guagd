@@ -48,14 +48,19 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var accountShortID string
+	var viewerAvatarURL string
 	if isAuthenticated {
 		if isOwner {
 			if len(user.AccountID) >= 8 {
 				accountShortID = user.AccountID[:8]
 			}
+			viewerAvatarURL = avatarURL
 		} else {
-			if id, err := g.getAccountIDBySupertokensID(r.Context(), sessionContainer.GetUserID()); err == nil && len(id) >= 8 {
-				accountShortID = id[:8]
+			if id, err := g.getAccountIDBySupertokensID(r.Context(), sessionContainer.GetUserID()); err == nil {
+				if len(id) >= 8 {
+					accountShortID = id[:8]
+				}
+				viewerAvatarURL = g.getAvatarURL(r.Context(), id)
 			}
 		}
 	}
@@ -70,7 +75,8 @@ func (g *GarageClient) GaragePage(w http.ResponseWriter, r *http.Request) {
 		Layout:           layout,
 		SafeCSS:          css.BuildTheme(theme),
 		CoverPhotoURL:    coverPhotoURL,
-		AvatarURL:        avatarURL,
+		AvatarURL:        viewerAvatarURL,
+		ProfileAvatarURL: avatarURL,
 		TotalMods:        stats.TotalMods,
 		TotalMaintenance: stats.TotalMaintenance,
 		TotalSpend:       stats.TotalSpend,

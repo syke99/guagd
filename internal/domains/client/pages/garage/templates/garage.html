@@ -204,6 +204,88 @@ border-radius: 16px;"></textarea>
   </div>
 </div>
 
+{{if .IsOwner}}
+<div id="request-wizard-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRequestWizard()">
+  <div class="modal-box" style="width:520px;max-width:95vw">
+    <div class="modal-title">New Verification Request</div>
+    <div class="wizard-steps" id="wizard-steps">
+      <span class="wizard-step active" id="wstep-1">1. Car</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-2">2. Records</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-3">3. Shop</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-4">4. Type</span>
+      <span class="wizard-step-sep">›</span>
+      <span class="wizard-step" id="wstep-5">5. Submit</span>
+    </div>
+    <div id="wizard-step-1" class="wizard-panel">
+      <p class="wizard-prompt">Which car is this request for?</p>
+      <div id="wizard-car-list">
+        <div class="wizard-loading">Loading…</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="closeRequestWizard()">Cancel</button>
+      </div>
+    </div>
+    <div id="wizard-step-2" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Select the mods and maintenance records to include:</p>
+      <div id="wizard-records-list"></div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(1)">Back</button>
+        <button class="btn-primary" onclick="wizardNext(3)">Next</button>
+      </div>
+    </div>
+    <div id="wizard-step-3" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Which shop are you sending this request to?</p>
+      <input type="text" class="add-car-input" id="wizard-shop-search"
+             placeholder="Search by shop @username"
+             autocomplete="off"
+             oninput="wizardShopSearch(this.value)">
+      <div id="wizard-shop-results" class="wizard-shop-results"></div>
+      <div id="wizard-shop-selected" class="wizard-shop-selected" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(2)">Back</button>
+        <button class="btn-primary" id="wizard-next-3" onclick="wizardNext(4)" disabled>Next</button>
+      </div>
+    </div>
+    <div id="wizard-step-4" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Is this for work the shop <strong>performed themselves</strong>, or work done by <strong>another shop</strong> that you're asking them to verify?</p>
+      <div class="wizard-radio-group">
+        <label class="wizard-radio-label">
+          <input type="radio" name="work_type" value="own_work" onchange="wizardSetWorkType('own_work')"> Shop's own work
+        </label>
+        <label class="wizard-radio-label">
+          <input type="radio" name="work_type" value="other_shop_work" onchange="wizardSetWorkType('other_shop_work')"> Another shop's work
+        </label>
+      </div>
+      <p class="wizard-prompt" style="margin-top:16px">Is this work <strong>already done</strong>, or are you requesting <strong>future service</strong>?</p>
+      <div class="wizard-radio-group">
+        <label class="wizard-radio-label">
+          <input type="radio" name="service_type" value="past" onchange="wizardSetServiceType('past')"> Already performed
+        </label>
+        <label class="wizard-radio-label">
+          <input type="radio" name="service_type" value="appointment" onchange="wizardSetServiceType('appointment')"> Schedule future service
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(3)">Back</button>
+        <button class="btn-primary" id="wizard-next-4" onclick="wizardNext(5)" disabled>Next</button>
+      </div>
+    </div>
+    <div id="wizard-step-5" class="wizard-panel" style="display:none">
+      <p class="wizard-prompt">Any notes for the shop? (optional)</p>
+      <textarea id="wizard-notes" class="wizard-notes-input" placeholder="e.g. Can reference invoice #1234, work done in March 2023" rows="4"></textarea>
+      <div id="wizard-submit-status" class="upload-status"></div>
+      <div class="modal-actions">
+        <button class="btn-nav" onclick="wizardBack(4)">Back</button>
+        <button class="btn-primary" onclick="submitRequest()">Send Request</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
 <script>
 const isOwner = {{if .IsOwner}}true{{else}}false{{end}};
 const currentUsername = '{{.Username}}';
@@ -432,13 +514,127 @@ function saveStyle() {
 
 // ── Info tabs ─────────────────────────────────────────────────
 function switchInfoTab(tab, btn) {
-  document.getElementById('info-tab-info').style.display    = tab === 'info'   ? '' : 'none';
-  document.getElementById('info-tab-awards').style.display  = tab === 'awards' ? '' : 'none';
+  document.getElementById('info-tab-info').style.display    = tab === 'info'     ? '' : 'none';
+  document.getElementById('info-tab-awards').style.display  = tab === 'awards'   ? '' : 'none';
+  const reqEl = document.getElementById('info-tab-requests');
+  if (reqEl) reqEl.style.display = tab === 'requests' ? '' : 'none';
   const bar = btn ? btn.closest('.info-tab-bar') : null;
   if (bar) {
     bar.querySelectorAll('.info-tab').forEach(t => t.classList.remove('active'));
     if (btn) btn.classList.add('active');
   }
+  if (tab === 'requests' && reqEl && !reqEl.dataset.loaded) {
+    reqEl.dataset.loaded = '1';
+    fetch('/api/v1/driver/requests?u={{.AccountShortID}}')
+      .then(r => r.text())
+      .then(html => {
+        const wrap = document.getElementById('driver-request-list-wrap');
+        if (wrap) wrap.innerHTML = html;
+      });
+  }
+}
+
+// ── Request wizard ────────────────────────────────────────────
+var wiz = { carID: null, verifIDs: [], shopUsername: null, shopID: null, workType: null, serviceType: null, currentStep: 1 };
+
+function openRequestWizard() {
+  wiz = { carID: null, verifIDs: [], shopUsername: null, shopID: null, workType: null, serviceType: null, currentStep: 1 };
+  document.getElementById('request-wizard-modal').style.display = 'flex';
+  showWizardStep(1);
+  const carList = document.getElementById('wizard-car-list');
+  carList.innerHTML = '<div class="wizard-loading">Loading…</div>';
+  fetch('/api/v1/driver/requests/wizard/cars?u={{.AccountShortID}}')
+    .then(r => r.text())
+    .then(html => { carList.innerHTML = html; });
+}
+function closeRequestWizard() {
+  document.getElementById('request-wizard-modal').style.display = 'none';
+}
+function showWizardStep(n) {
+  wiz.currentStep = n;
+  for (let i = 1; i <= 5; i++) {
+    const panel = document.getElementById('wizard-step-' + i);
+    const step  = document.getElementById('wstep-' + i);
+    if (panel) panel.style.display = i === n ? 'block' : 'none';
+    if (step)  step.classList.toggle('active', i === n);
+  }
+}
+function wizardBack(step) { showWizardStep(step); }
+function wizardNext(step) {
+  if (step === 3 && wiz.verifIDs.length === 0) { alert('Select at least one record.'); return; }
+  if (step === 5 && (!wiz.workType || !wiz.serviceType)) { alert('Please select both options.'); return; }
+  showWizardStep(step);
+}
+function selectCar(el) {
+  wiz.carID = el.dataset.id;
+  document.querySelectorAll('.wizard-car-item').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  const list = document.getElementById('wizard-records-list');
+  list.innerHTML = '<div class="wizard-loading">Loading…</div>';
+  fetch('/api/v1/driver/requests/wizard/records?u={{.AccountShortID}}&car_id=' + wiz.carID)
+    .then(r => r.text())
+    .then(html => { list.innerHTML = html; showWizardStep(2); });
+}
+function toggleRecord(el, verifID) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) {
+    if (!wiz.verifIDs.includes(verifID)) wiz.verifIDs.push(verifID);
+  } else {
+    wiz.verifIDs = wiz.verifIDs.filter(id => id !== verifID);
+  }
+}
+var shopSearchTimer = null;
+function wizardShopSearch(q) {
+  clearTimeout(shopSearchTimer);
+  if (!q) { document.getElementById('wizard-shop-results').innerHTML = ''; return; }
+  shopSearchTimer = setTimeout(() => {
+    fetch('/api/v1/driver/requests/wizard/shops?q=' + encodeURIComponent(q))
+      .then(r => r.text())
+      .then(html => { document.getElementById('wizard-shop-results').innerHTML = html; });
+  }, 150);
+}
+function selectShop(el) {
+  wiz.shopID = el.dataset.id;
+  wiz.shopUsername = el.dataset.username;
+  document.getElementById('wizard-shop-results').innerHTML = '';
+  const sel = document.getElementById('wizard-shop-selected');
+  sel.innerHTML = '<span class="wizard-shop-badge">@' + wiz.shopUsername + ' <button onclick="clearShop()" style="background:none;border:none;cursor:pointer;color:var(--muted)">✕</button></span>';
+  sel.style.display = 'block';
+  document.getElementById('wizard-next-3').disabled = false;
+}
+function clearShop() {
+  wiz.shopID = null; wiz.shopUsername = null;
+  document.getElementById('wizard-shop-selected').style.display = 'none';
+  document.getElementById('wizard-next-3').disabled = true;
+  document.getElementById('wizard-shop-search').value = '';
+}
+function wizardSetWorkType(v) { wiz.workType = v; checkStep4(); }
+function wizardSetServiceType(v) { wiz.serviceType = v; checkStep4(); }
+function checkStep4() {
+  document.getElementById('wizard-next-4').disabled = !(wiz.workType && wiz.serviceType);
+}
+function submitRequest() {
+  const status = document.getElementById('wizard-submit-status');
+  status.textContent = 'Sending…';
+  const payload = {
+    shop_username: wiz.shopUsername,
+    service_type:  wiz.serviceType,
+    work_type:     wiz.workType,
+    notes:         document.getElementById('wizard-notes').value,
+    verif_ids:     wiz.verifIDs
+  };
+  fetch('/api/v1/driver/requests/create?u={{.AccountShortID}}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.ok ? r.text() : Promise.reject(r))
+  .then(html => {
+    const wrap = document.getElementById('driver-request-list-wrap');
+    if (wrap) wrap.innerHTML = html;
+    closeRequestWizard();
+  })
+  .catch(() => { status.textContent = 'Failed to send. Try again.'; });
 }
 
 function saveMusic() {
@@ -1094,11 +1290,7 @@ window.addEventListener('resize', syncCorkBoard);
 {{end}}
 {{end}}
 
-{{define "nav-page-dropdown"}}
-{{if .AccountShortID}}
-<a href="/requests?u={{.AccountShortID}}" class="nav-menu-item">Requests</a>
-{{end}}
-{{end}}
+{{define "nav-page-dropdown"}}{{end}}
 
 {{define "profile-header"}}
 <div class="garage-profile">
@@ -1112,7 +1304,7 @@ window.addEventListener('resize', syncCorkBoard);
   <div class="garage-profile-tab">
     <div class="panel-avatar-wrap">
       <div class="panel-avatar" id="profile-avatar">
-        {{if .AvatarURL}}<img id="profile-avatar-img" src="{{.AvatarURL}}">{{else}}<span id="profile-avatar-emoji">👤</span>{{end}}
+        {{if .ProfileAvatarURL}}<img id="profile-avatar-img" src="{{.ProfileAvatarURL}}">{{else}}<span id="profile-avatar-emoji">👤</span>{{end}}
         {{if .IsOwner}}<div id="profile-avatar-edit" class="panel-avatar-edit-overlay" style="display:none" onclick="openAvatarUpload()">📷</div>{{end}}
       </div>
       {{if .IsOwner}}<button id="profile-avatar-remove" class="panel-avatar-remove-btn" style="display:none" onclick="removeAvatarPhoto()">✕</button>{{end}}
@@ -1193,6 +1385,7 @@ window.addEventListener('resize', syncCorkBoard);
   <div class="info-tab-bar">
     <button class="info-tab active" onclick="switchInfoTab('info', this)">Info</button>
     <button class="info-tab" onclick="switchInfoTab('awards', this)">Awards</button>
+    {{if .IsOwner}}<button class="info-tab" onclick="switchInfoTab('requests', this)">Requests</button>{{end}}
   </div>
   <div id="info-tab-info" class="info-tab-content">
     <div class="info-stat-grid">
@@ -1213,6 +1406,14 @@ window.addEventListener('resize', syncCorkBoard);
   <div id="info-tab-awards" class="info-tab-content" style="display:none">
     <div class="garage-empty-state" style="padding:20px 0;font-size:12px">Awards coming soon.</div>
   </div>
+  {{if .IsOwner}}
+  <div id="info-tab-requests" class="info-tab-content" style="display:none">
+    <div class="req-tab-header">
+      <button class="btn-primary" style="font-size:12px;padding:5px 12px" onclick="openRequestWizard()">+ New Request</button>
+    </div>
+    <div id="driver-request-list-wrap"></div>
+  </div>
+  {{end}}
 </div>
 {{end}}
 

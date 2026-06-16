@@ -18,7 +18,8 @@ type GaragePageData struct {
 	Layout             []LayoutItem
 	SafeCSS            template.CSS
 	CoverPhotoURL      string
-	AvatarURL          string
+	AvatarURL          string // viewer's avatar — used by the nav
+	ProfileAvatarURL   string // garage owner's avatar — used by the profile header
 	TotalMods          int
 	TotalMaintenance   int
 	TotalSpend         int

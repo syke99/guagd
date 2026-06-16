@@ -298,6 +298,24 @@ func (g *GarageClient) getGarageLayout(ctx context.Context, accountID string) ([
 	return layout, theme, coverPhotoURL, avatarURL, nil
 }
 
+func (g *GarageClient) getAvatarURL(ctx context.Context, accountID string) string {
+	var avatarKey string
+	_ = g.db.QueryRow(ctx,
+		"SELECT COALESCE(avatar_key, '') FROM account_photos WHERE account_id = $1",
+		func(rows pgx.Rows) error {
+			if !rows.Next() {
+				return nil
+			}
+			return rows.Scan(&avatarKey)
+		},
+		accountID,
+	)
+	if avatarKey == "" {
+		return ""
+	}
+	return g.storage.AccountPhotoURL(avatarKey)
+}
+
 func (g *GarageClient) upsertLayout(ctx context.Context, accountID string, layout []models.LayoutItem) error {
 	b, err := json.Marshal(layout)
 	if err != nil {
