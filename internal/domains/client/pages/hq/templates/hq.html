@@ -434,17 +434,9 @@ window.addEventListener('resize', syncCorkBoard);
 </script>
 {{end}}
 
-{{define "nav-page-controls"}}
-{{if .IsOwner}}
-<button id="btn-edit" class="nav-menu-item" onclick="toggleEdit()">Edit</button>
-{{end}}
-{{end}}
+{{define "nav-page-controls"}}{{end}}
 
-{{define "nav-page-dropdown"}}
-{{if .AccountShortID}}
-<a href="/requests?u={{.AccountShortID}}" class="nav-menu-item">Requests</a>
-{{end}}
-{{end}}
+{{define "nav-page-dropdown"}}{{end}}
 
 {{define "hq-profile-header"}}
 <div class="hq-profile">
